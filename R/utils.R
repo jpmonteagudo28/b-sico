@@ -2,9 +2,9 @@
 `%!in%` <- Negate(`%in%`)
 
 # Get current theme used in graphing device
+current_theme <- function(){
 
 
-
-
+}
 
 

@@ -7,7 +7,7 @@
 #' the following palettes are available:
 #' \code{imagenes},\code{primvera_descanso},\code{no_aguanto_mas},\code{emilio_rodriguez},
 #' \code{paisaje_bohio},\code{productivismo}, \code{retrato_marin}, \code{helena_herrera},
-#' \code{emarque_colon}, \code{havana}, and \code{guajiros}.
+#' \code{emarque_colon}, \code{havana}, \code{guajiros} and \code{el_humo}.
 #' Use \code{\link{basic_palettes}} to construct palettes.
 #'
 #'@export
@@ -34,7 +34,9 @@ basic_palettes <- list(
 
   havana = c("#E9F2EF","#6DA0A6","#A3BFBF","#BFB78E","#D2D9D3","#687372","#260101"),
 
-  guajiros = c("#735D34","#D9BB84","#F2D5A0","#A65526","#A6926D","#BF622C","#592918")
+  guajiros = c("#735D34","#D9BB84","#F2D5A0","#A65526","#A6926D","#BF622C","#592918"),
+
+  el_humo = c("#CFCFCF","#4B4B4B","#2A2A2A")
 )
 
 basic_palette <- function(name,
