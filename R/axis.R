@@ -34,36 +34,30 @@ basic_axis <- function(format = "integer",
     # Format tick labels
     formatted_labels <- format_axis(tick_positions, format)
 
+    axis_args <- c(
+      list(
+        side = side,
+        at = tick_positions,
+        labels = formatted_labels,
+        lwd = line_width),
+      args
+    )
+
     # Apply custom axis with formatted labels
-    graphics::axis(side = side,
-                   at = tick_positions,
-                   labels = formatted_labels,
-                   lwd = line_width,
-                   ...)
+    do.call(graphics::axis, axis_args)
   }
 }
 
 # format plot axis depending on user input
 format_axis <- function(.x,format){
 
-  if(format == "percent"){
-  .x <- sprintf("%1.2f%%",100*.x)
-  }
+  .x <- switch(format,
+               percent = sprintf("%1.0f%%", 100 * .x),
+               date = as.Date(.x, format = "%D"),
+               POSIXt = as.POSIXct(.x, format = "%D"),
+               integer = as.integer(.x),
+               scientific = sprintf("%e", .x)
+  )
 
-  if(format == "date"){
-    .x <- as.Date(.x, format = "%D")
-  }
-
-  if(format == "POSIXt"){
-    .x <- as.POSIXct(.x, format = "%D")
-  }
-
-  if(format == "integer"){
-    .x <- as.integer(.x)
-  }
-
-  if(format == "scientific"){
-    .x <- sprintf("%e",.x)
-  }
   return(.x)
 }
