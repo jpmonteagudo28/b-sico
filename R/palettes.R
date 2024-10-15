@@ -39,6 +39,9 @@ basic_palettes <- list(
   el_humo = c("#CFCFCF","#4B4B4B","#2A2A2A")
 )
 
+# Define a palette environment to store current palette use
+palette_env <- new.env()
+
 basic_palette <- function(name,
                            n,
                            type = c("discrete","continuous"),
@@ -84,7 +87,11 @@ basic_palette <- function(name,
     discrete = palette[1:n]
   )
 
-  structure(out,class = "palette", name = name)
+  palette_env$current_palette <- structure(
+    out,
+    class = "palette",
+    name = name
+    )
 }
 
 print.palette <- function(.x,...){
