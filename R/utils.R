@@ -49,7 +49,7 @@ set_pars <- function(pars){
     pars_list[grep("^palette\\.?",names(pars))] <- NULL
     pars_list[grep("^rect\\.?",names(pars))] <- NULL
 
-    function(set= TRUE){
+    function(set = TRUE){
 
       if(set){
         pars_list$new <- graphics::par('new')
