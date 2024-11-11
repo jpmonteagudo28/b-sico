@@ -1,135 +1,97 @@
 # Simple negation function to find excluded elements in a set
 `%!in%` <- Negate(`%in%`)
 
-# Check current theme used in graphing device
-current_theme <- function(){
+# Calculate gaps based on scale type
+ticks_gap <- function(ticks, gap, is_log,
+                      digits = NULL) {
 
-  hook_before <- getHook("before.plot.new")
-  hook_now <- getHook("plot.new")
+  ticks_len <- length(ticks)
+  if (is_log) {
 
-  theme <- list()
-
-  if(is.function(hook_before$par)){
-    # retrieve setting but don't evaluate
-    theme <- c(theme,hook_before$par(FALSE))
-  }
-
-  if(is.function(hook_before$palette)){
-    # retrieve settings but don't evaluate
-    theme <- c(theme,hook_before$palette(FALSE))
-  }
-
-  if(is.function(hook_now$rect)){
-    # retrieve settings but don't evaluate
-    theme <- c(theme,hook_now$rect(FALSE))
-  }
-
-  return(theme)
-}
-
-# Get the specified theme
-get_theme <- function(theme = NULL){
-
-  themes <- list_themes()
-
-  if(theme %in% names(themes)){
-    themes[[theme]]()
-  } else{
-
-    stop("The theme specified doesn't exist:",theme,".\nAvailable themes:",
-         paste(names(list_themes())), collapse = ",")
-  }
-}
-
-set_pars <- function(pars){
-
-  pars_list <- pars
-
-  # Exclude 'palette' and 'rect' from 'par()'
-    pars_list[grep("^palette\\.?",names(pars))] <- NULL
-    pars_list[grep("^rect\\.?",names(pars))] <- NULL
-
-    function(set = TRUE){
-
-      if(set){
-        pars_list$new <- graphics::par('new')
-        do.call(graphics::par,pars_list)
-      } else{
-
-        pars_list
-      }
+    # For logarithmic scale, calculate multiplicative gap
+    if(!is.null(digits)){
+      adj_gap <- round((log10(ticks[ticks_len]) - log10(ticks[ticks_len - 1])) * gap,
+                       digits = digits)
+    } else{
+      adj_gap <- (log10(ticks[ticks_len]) - log10(ticks[ticks_len - 1])) * gap
     }
-}
 
-set_palette <- function(pars) {
 
-  # Try to get palette from `pars`; if absent, call `use_current_palette()`
-  palette_pars <- pars[grep("^palette\\.?", names(pars))]
-  palette_from_env <- if (is.null(palette_pars$palette)) {
-
-    tryCatch(
-      use_current_palette(),
-      error = function(e) NULL
-    )
+    return(adj_gap)
   } else {
-    palette_pars$palette
+
+    # For linear scale, calculate additive gap
+    if(!is.null(digits)){
+      adj_gap <- round((ticks[ticks_len] - ticks[ticks_len - 1]) * gap,
+                       digits = digits)
+    } else{
+      adj_gap <- (ticks[ticks_len] - ticks[ticks_len - 1]) * gap
     }
 
-  # Check if a palette was found either in `pars` or via `use_current_palette()`
-  if (!is.null(palette_from_env)) {
-    # Set the palette
-    grDevices::palette(value = palette_from_env)
+    return(adj_gap)
+  }
+}
 
+# Function to adjust ticks to include min and max values
+adjust_ticks <- function(ticks, x_min, x_max,
+                         adj_gap, is_log) {
 
-    function(set = TRUE) {
-      if (set) {
-        grDevices::palette(value = palette_from_env)
-      } else {
-        list(palette = palette_from_env)
-      }
+  ticks_len <- length(ticks)
+
+  # Adjust maximum tick
+  last_tick <- ticks[ticks_len]
+
+  if (islog) {
+
+    if (log10(x_max) - log10(last_tick) < adj_gap) {
+      ticks[ticks_len] <- x_max
+
+    } else {
+      ticks <- c(ticks, x_max)
     }
   } else {
-    NULL
-  }
-}
 
-# Check if palette has been set prior to using themes with default palettes.
-use_current_palette <- function(){
+    if (x_max - last_tick < adj_gap) {
+      ticks[ticks_len] <- x_max
 
-  if(!exists("current_palette",envir = palette_env)){
-    stop("No palette has been set yet.
-         \nUse basic_palette() to set a palette before calling
-         'use_current_palette()'.")
-  }
-
-  return(get("current_palette", envir = palette_env))
-}
-
-# Set rectangle settings in graphing device
-set_rect <- function(pars){
-
-  pars <- pars[grep("^rect\\.?",names(pars))]
-
-  if(length(pars) > 0){
-    function(set = TRUE){
-      if(set){
-        rect_list <- list(
-          xleft   = graphics::par("usr")[1],
-          ybottom=graphics::par("usr")[3],
-          xright  = graphics::par("usr")[2],
-          ytop=graphics::par("usr")[4],
-          col     = ifelse(is.null(pars$rect.col), NA, pars$rect.col),
-          density = ifelse(is.null(pars$rect.density), numeric(), pars$rect.density),
-          angle   = ifelse(is.null(pars$rect.angle), 35, pars$rect.angle),
-          lwd     = ifelse(is.null(pars$rect.lwd), 1, pars$rect.lwd),
-          lty     = ifelse(is.null(pars$rect.lty), 1, pars$rect.lty),
-          border  = ifelse(is.null(pars$rect.border), NA, pars$rect.border)
-        )
-      } else {
-        pars
-      }
+    } else {
+      ticks <- c(ticks, x_max)
     }
-  } else{
-    NULL
   }
+
+  # Adjust minimum tick
+  first_tick <- ticks[1]
+
+  if (islog) {
+
+    if (abs(log10(first_tick) - log10(x_min)) < adj_gap) {
+      ticks[1] <- x_min
+
+    } else {
+      ticks <- c(x_min, ticks)
+    }
+
+  } else {
+
+    if (first_tick - x_min < adj_gap) {
+      ticks[1] <- x_min
+
+    } else {
+      ticks <- c(x_min, ticks)
+    }
+  }
+
+  return(ticks)
+}
+
+# Main logic for adjusting axis ticks
+adjust_axis_ticks <- function(ticks, x_min, x_max, gap,
+                              is_log,digits = NULL) {
+  # Calculate the gap
+  adj_gap <- ticks_gap(ticks, mingap, islog)
+
+  # Adjust ticks to include min and max if needed
+  ticks <- adjust_ticks(ticks, x_min, x_max, adj_gap, is_log)
+
+  return(ticks)
 }
