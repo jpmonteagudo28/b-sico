@@ -109,3 +109,27 @@ adjust_axis_ticks <- function(ticks, x_min, x_max, gap,
 
   return(ticks)
 }
+
+
+# Adjust lengths to ensure both axes scale equally on the output device
+scale_shift <- function(value, axis, plot_width, plot_height, is_gap = FALSE) {
+  # Adjust shift based on whether it applies to the axis or to a gap
+  if (axis == "y") {
+    if (is_gap) {
+      # For gaps on the y-axis, use the width
+      value / par("pin")[2] * plot_height
+    } else {
+      # For shifts along the y-axis, use the width
+      value / par("pin")[1] * plot_width
+    }
+  } else {
+    if (is_gap) {
+      # For gaps on the x-axis, use the height
+      value / par("pin")[1] * plot_width
+    } else {
+      # For shifts along the x-axis, use the height
+      value / par("pin")[2] * plot_height
+    }
+  }
+}
+

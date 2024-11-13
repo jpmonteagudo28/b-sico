@@ -218,7 +218,7 @@ format_axis <- function(.x,format,digits = NULL,...){
 #' @export
 
 range_frame_axis <- function(.x,
-                             sides = "bottom",
+                             side = "bottom",
                          at = NULL,
                          draw_lines = FALSE,
                          line_width = 0,
@@ -231,13 +231,13 @@ range_frame_axis <- function(.x,
                          median_gap = 0.05,
                          digits = 2,...){
 
-  sides <- match.arg(sides,
+  side <- match.arg(side,
                    c("bottom","left",
                      "top","right"),
                    several.ok = TRUE)
 
   stopifnot(
-          is.character(sides),
+          is.character(side),
           is.numeric(tick_gap),
           is.numeric(axis_gap),
           is.numeric(median_gap),
@@ -258,25 +258,27 @@ range_frame_axis <- function(.x,
   # Recon sides to be plotted
   side_map <- c(bottom = 1, left = 2,
                 top = 3, right = 4)
-  numeric_sides <- side_map[sides]
+  side_index <- side_map[side]
+
+  char_width <- par("cin")[1]
+
+  # Define properties for each axis side
+  # in the following order (b,l,t,r)
+  flip_choice <- c(1, 1, -1, -1) # Use to place labels in/outside plot margin
+  x_axis_choice <- c(TRUE, FALSE, TRUE, FALSE) # Use to work in x or y axes
+  is_log_axis <- c("xlog", "ylog", "xlog", "ylog") # Work with log x-axis
+  other_log_axis <- c("ylog", "xlog", "ylog", "xlog") # work with log x-axis
+  usr_indices <- c(3, 1, 4, 2) # Extreme user coord. of plotting region
 
   # Handle side pars and tick marks
   for (side in numeric_sides) {
 
-    # Define properties for each axis side
-    # in the following order (b,l,t,r)
-    flip_choice <- c(1, 1, -1, -1) # Use to place labels in/outside plot margin
-    x_axis_choice <- c(TRUE, FALSE, TRUE, FALSE) # Use to work in x or y axes
-    is_log_axis <- c("xlog", "ylog", "xlog", "ylog") # Work with log x-axis
-    other_log_axis <- c("ylog", "xlog", "ylog", "xlog") # work with log x-axis
-    usr_indices <- c(3, 1, 4, 2) # Extreme user coord. of plotting region
-
     # Extract the relevant values based on the 'side'
-    flip <- flip_choice[side]
-    x_axis <- x_axis_choice[side]
-    is_log <- par(is_log_axis[side])
-    other_log <- par(other_log_axis[side])
-    par_side <- usr_indices[side]
+    flip <- flip_choice[side_index]
+    x_axis <- x_axis_choice[side_index]
+    is_log <- par(is_log_axis[side_index])
+    other_log <- par(other_log_axis[side_index])
+    par_side <- usr_indices[side_index]
 
     # Calculate the axis base position and dimensions
     base <- par("usr")[par_side]
@@ -287,7 +289,7 @@ range_frame_axis <- function(.x,
       # For log scale, work in log space
       shift <- log10(1 + axis_gap)
       med_gap <- log10(1 + median_gap)
-      mean_shift <- log10(1 + par("cin")[1] * 0.5 * flip)
+      mean_shift <- log10(1 + char_width * 0.5 * flip)
 
       # Transform statistics to log space
       log_min <- log10(x_min)
@@ -307,7 +309,7 @@ range_frame_axis <- function(.x,
       # Linear scale calculations
       shift <- par("pin")[1] * 0.02 * axis_gap
       med_gap <- par("pin")[1] * median_gap
-      mean_shift <- par("cin")[1] * 0.5 * flip
+      mean_shift <- char_width * 0.5 * flip
 
       gapt <- x_median + med_gap
       gapb <- x_median - med_gap
@@ -417,7 +419,7 @@ range_frame_axis <- function(.x,
 #' highlighting of key summary statistics or specific values, such as the mean.
 #'
 #' @param .x A numeric vector. The data used for the axis ticks and labels.
-#' @param sides A character vector indicating which sides of the plot to draw the axis on.
+#' @param side A character vector indicating which sides of the plot to draw the axis on.
 #'   Options are `"bottom"`, `"left"`, `"top"`, and `"right"`. Default is `"bottom"`.
 #' @param at Optional. A numeric vector specifying the exact positions for ticks.
 #'   If `NULL`, the function uses the values from `.x`.
@@ -474,7 +476,7 @@ range_frame_axis <- function(.x,
 #' @export
 #'
 minimal_rug_axis <- function(.x,
-                             sides = "bottom",
+                             side = "bottom",
                              at = NULL,
                              line_width = 0,
                              tick_width = 0.7,
@@ -486,39 +488,38 @@ minimal_rug_axis <- function(.x,
                              label_gap = 1.5,
                              digits = 2,...){
 
-  sides <- match.arg(sides,
+  side <- match.arg(side,
                      c("bottom","left",
                        "top","right"),
                      several.ok = TRUE)
 
   stopifnot(
-    is.character(sides),
+    is.character(side),
     is.numeric(line_width),
     is.numeric(tick_width),
     is.numeric(tick_width),
     is.character(tick_color),
     is.character(mean_color),
-    is.numeric(label_gap)
+    is.numeric(label_gap),
+    is.logical(label_summ_stats)
   )
 
-  # Recon sides to be plotted
-  side_map <- c(bottom = 1, left = 2,
-                top = 3, right = 4)
-  numeric_sides <- side_map[sides]
-
-  #Compute summary stts
+  # Compute summary stts
   summ_stats <- as.numeric(summary(.x))
   x_mean <- mean(.x)
 
-  side_map <- c(bottom = 1, left = 2, top = 3, right = 4)
-  numeric_sides <- side_map[sides]
+  side_map <- c(bottom = 1,
+                left = 2,
+                top = 3,
+                right = 4)
+
+  side_index <- side_map[side]
 
   # Handle tick positions
   ticks <- if (is.null(at)) .x else at
 
   # Handle side parameters and tick marks
-  for (side in numeric_sides) {
-    # Draw the tick marks (rug plot)
+  # Draw the tick marks (rug plot)
     axis(side,
          at = ticks,
          labels = FALSE,
@@ -561,11 +562,153 @@ minimal_rug_axis <- function(.x,
         col = label_color,
         cex = 0.9
       )
-    }
   }
 }
 
-marginal_hist_axis <- function(.x,){}
+marginal_hist_axis <- function(.x,
+                               side,
+                               scale_shift = 0.35,
+                               mean_shift = 0.5,
+                               stack_color = "red",
+                               mean_color = "red",
+                               axis_gap = 0.005,
+                               point_character = 15,
+                               label_gap = 1.5,
+                               label_every_n = NULL,
+                               label_summ_stats = FALSE,
+                               digits = 2,
+                               ...
+                              ){
+
+  side <- match.arg(side,
+                     c("bottom","left",
+                       "top","right"),
+                     several.ok = TRUE)
+
+  stopifnot(
+    is.character(side),
+    is.numeric(axis_gap),
+    is.numeric(scale_shift),
+    is.numeric(mean_shift),
+    is.character(stack_color)
+  )
+
+  # Compute summary stts
+  summ_stats <- as.numeric(summary(.x))
+  x_mean <- mean(.x)
+
+  # Recon sides to be plotted
+  side_map <- c(bottom = 1, left = 2,
+                top = 3, right = 4)
+  side_index <- side_map[side]
+
+  # Define properties for each axis side
+  # in the following order (b,l,t,r)
+  flip_choice <- c(1, 1, -1, -1) # Use to place labels in/outside plot margin
+  x_axis_choice <- c(TRUE, FALSE, TRUE, FALSE) # Use to work in x or y axes
+  usr_indices <- c(3, 1, 4, 2) # Extreme user coord. of plotting region
+
+  # Handle side pars and tick marks
+  # Extract the relevant values based on the 'side'
+  flip <- flip_choice[side_index]
+  x_axis <- x_axis_choice[side_index]
+  par_side <- usr_indices[side_index]
+
+    # Check if the axis is logarithmic
+  is_log <- if (x_axis) par("xlog") else par("ylog")
+  if (is_log) base <- 10^base
+
+    # Calculate the axis base position and dimensions
+    base <- par("usr")[par_side]
+    plot_width <- diff(par("usr")[1:2])
+    plot_height <- diff(par("usr")[3:4])
+    char_width <- par("cin")[1]
+    char_height <- par("cin")[2]
+
+    # Calculate the shifts away from the axis at each of
+    # these points
+    axis_shift <- par("pin")[1]*axis_gap*flip
+    median_gap <- par("pin")[1]*axis_gap
+    mean_shift <- char_width * mean_shift * flip
+    strip_shift <- char_width * scale_shift*flip
+
+    # Unified scaling adjustment
+    axis_shift <- scale_shift(axis_shift,
+                         axis = if (!x_axis) "y" else "x",
+                         plot_width,
+                         plot_height)
+    mean_shift <- scale_shift(mean_shift,
+                             axis = if (!x_axis) "y" else "x",
+                             plot_width,
+                             plot_height)
+    strip_shift <- scale_shift(strip_shift,
+                              axis = if (!x_axis) "y" else "x",
+                              plot_width,
+                              plot_height)
+    median_gap <- scale_shift(median_gap,
+                              axis = if (!x_axis) "x" else "y",
+                              plot_width,
+                              plot_height,
+                              is_gap = TRUE)
+
+    # Correct offset for stripchart's handling of character width/height
+    offset <- if (!x_axis) flip * char_height/char_width else flip
+
+
+    # Ensure elements are not clipped
+    old_xpd <- par(xpd = TRUE)
+    on.exit(par(xpd = old_xpd))
+
+    stripchart(.x,
+               method = "stack",
+               vertical = !x_axis,
+               offset = offset,
+               pch = point_character,
+               cex = 0.5,
+               add = TRUE,
+               at = base + axis_shift + strip_shift,
+               col = stack_color)
+
+    # Define label orientation based on axis side
+    las_value <- if (side %in% c(1, 3)) 1 else 2
+
+    # Determine labels based on user choice
+    labels_to_draw <- if (label_summ_stats) {
+      # Use summary statistics for labels
+      summ_stats
+    } else if (!is.null(label_every_n)) {
+      # Label every `n`-th value in the data
+      seq(min(.x), max(.x), by = label_every_n)
+    } else {
+      # Default to no labels
+      return()
+    }
+
+    # Dynamically skip labels to prevent overlap
+    if (!label_summ_stats && length(labels_to_draw) > 1) {
+      label_positions <- labels_to_draw
+      label_spacing <- abs(diff(label_positions))
+      median_spacing <- median(label_spacing)
+      labels_to_draw <- labels_to_draw[c(TRUE, diff(labels_to_draw) > label_gap * median_spacing)]
+    }
+
+    # Draw selective labels with appropriate gaps
+    for (stat in labels_to_draw) {
+      # Determine label color for mean vs. other statistics
+      label_color <- if (round(stat, digits) == round(x_mean, digits)) mean_color else "black"
+
+      # Draw labels using `mtext`
+      mtext(
+        text = round(stat, digits),
+        side = side,
+        at = stat,
+        line = 0.85,
+        las = las_value,
+        col = label_color,
+        cex = 0.9
+      )
+    }
+}
 
 
 
