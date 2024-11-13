@@ -1,6 +1,39 @@
-# Create custom axis in base graphics plot
+#' Draw a Custom Axis with Formatted Labels
+#'
+#' This function adds a custom axis to a base graphics plot with user-defined formatting
+#' for tick labels. It supports multiple formats, such as percentages, currency, dates,
+#' and scientific notation.
+#'
+#' @param format A character string specifying the format of the axis labels. Options include:
+#'   `"percent"`, `"dollar"`, `"date"`, `"POSIXt"`, `"integer"`, and `"scientific"`. Default is `"integer"`.
+#' @param sides A character vector indicating which sides of the plot to draw the axis on.
+#'   Options are `"bottom"`, `"left"`, `"top"`, and `"right"`. Default is `"bottom"`.
+#' @param line_width Numeric. The width of the axis line. Default is `0.5`.
+#' @param at Optional. A numeric vector specifying the exact positions for ticks. If `NULL`,
+#'   positions are determined automatically using `pretty()` on `axTicks()`.
+#' @param ... Additional graphical parameters passed to the `axis()` function.
+#'
+#' @details
+#' The function creates a custom axis with tick marks on the specified sides of the plot.
+#' The labels can be formatted according to different styles using the `format` parameter.
+#'
+#' The axis labels are formatted using the `format_axis()` function, allowing for different
+#' display formats, including percentages, currency, and dates.
+#'
+#' @return The function is used for its side effects (modifying the plot). It does not
+#' return a value.
+#'
+#' @examples
+#' # Create a basic plot without default axes
+#' plot(mpg ~ wt, data = mtcars, type = "p", axes = FALSE)
+#' basic_axis(format = "integer", sides = "bottom")
+#' basic_axis(format = "percent", sides = "left")
+#'
+#' @seealso \code{\link{axis}}, \code{\link{format_axis}}
+#' @export
+
 basic_axis <- function(format = "integer",
-                     sides = c("bottom","left"),
+                     sides = "bottom",
                      line_width = 0.5,...,
                      at = NULL){
 
@@ -50,7 +83,43 @@ basic_axis <- function(format = "integer",
   }
 }
 
-# Format plot axis depending on user input
+#' Format Axis Labels Based on User-Specified Format
+#'
+#' This function formats a numeric vector according to the specified format, supporting
+#' various styles like percentages, currency, dates, and scientific notation.
+#'
+#' @param .x A numeric vector to be formatted.
+#' @param format A character string specifying the format type. Options include:
+#'   `"percent"`, `"dollar"`, `"date"`, `"POSIXt"`, `"integer"`, and `"scientific"`.
+#' @param digits Optional. An integer specifying the number of decimal places to round
+#'   for `"integer"` formatting. Default is `NULL`.
+#' @param ... Additional arguments passed to the formatting functions.
+#'
+#' @details
+#' The function supports formatting in the following ways:
+#' - `"percent"`: Converts the values to percentages (e.g., `0.25` becomes `"25%"`).
+#' - `"dollar"`: Converts the values to currency (e.g., `100` becomes `"$100"`).
+#' - `"date"`: Converts numeric values to `Date` objects.
+#' - `"POSIXt"`: Converts numeric values to `POSIXct` datetime objects.
+#' - `"integer"`: Rounds values to the nearest integer. If `digits` is provided, it rounds
+#'   to the specified number of decimal places.
+#' - `"scientific"`: Converts values to scientific notation.
+#'
+#' @return A character vector of formatted labels.
+#'
+#' @examples
+#' # Format values as percentages
+#' format_axis(c(0.1, 0.25, 0.75), format = "percent")
+#'
+#' # Format values as currency
+#' format_axis(c(100, 250, 500), format = "dollar")
+#'
+#' # Format dates
+#' format_axis(c(19000, 19500), format = "date")
+#'
+#' @seealso \code{\link{basic_axis}}
+#' @export
+
 format_axis <- function(.x,format,digits = NULL,...){
 
   .x <- switch(format,
@@ -68,13 +137,91 @@ format_axis <- function(.x,format,digits = NULL,...){
   return(.x)
 }
 
-# Define a custom axis for range frame plots
-#' @param name description
+#' Range Frame Axis with Summary Statistics and Custom Ticks
+#'
+#' Adds a minimalist axis to a plot, inspired by Edward Tufte's range frames,
+#' displaying summary statistics (min, Q1, median, mean, Q3, max) and custom ticks.
+#' Supports both linear and logarithmic scales, with customizable colors,
+#' tick positions, and axis properties.
+#'
+#' @param .x A numeric vector containing the data for which the summary statistics are calculated.
+#' @param sides A character vector specifying which sides of the plot to draw the axis on.
+#'   Options include `"bottom"`, `"left"`, `"top"`, and `"right"`. Defaults to `c("bottom", "left")`.
+#' @param at Optional numeric vector specifying tick positions. If `NULL`,
+#'   ticks are generated based on the summary statistics of `.x`.
+#' @param draw_lines Logical indicating whether to draw lines extending from the axis for
+#'   the lower and upper quartiles. Defaults to `FALSE`.
+#' @param line_width Numeric value specifying the width of the drawn lines if `draw_lines = TRUE`.
+#'   Defaults to `0`.
+#' @param tick_width Numeric value for the width of tick marks. Defaults to `0.7`.
+#' @param tick_gap Numeric value specifying the minimum gap between tick marks, in plot coordinates.
+#'   Defaults to `0.5`.
+#' @param tick_length Numeric value specifying the length of tick marks. Negative values indicate
+#'   that ticks are drawn inward from the axis. Defaults to `-0.5`.
+#' @param tick_color Color for the tick marks. Defaults to `"gray30"`.
+#' @param mean_color Color for the label of the mean value. Defaults to `"red"`.
+#' @param axis_gap Numeric value specifying the gap between the axis and the Q1/Q3 lines.
+#'   Used for both linear and logarithmic scales. Defaults to `0.05`.
+#' @param median_gap Numeric value specifying the gap between the median and its label.
+#'   Used for both linear and logarithmic scales. Defaults to `0.05`.
+#' @param digits Integer specifying the number of decimal places to round the tick labels.
+#'   Defaults to `2`.
+#' @param ... Additional arguments to be passed to other plotting functions.
+#'
+#' @details
+#' This function is designed for minimalist data visualization, focusing on the
+#' essential summary statistics of the data. It is especially useful for emphasizing
+#' key statistical values while maintaining a clean, uncluttered plot appearance.
+#'
+#' The function handles both linear and logarithmic scales seamlessly, automatically
+#' adjusting the positioning of summary statistics, labels, and tick marks based on
+#' the scale of the axis.
+#'
+#' If the `draw_lines` parameter is set to `TRUE`, the function draws lines extending
+#' from the axis to represent the quartiles. The axis labels include the mean, median,
+#' Q1, and Q3 values, with the mean highlighted using the specified `mean_color`.
+#'
+#' @return Invisibly returns `NULL`, as the primary purpose is to modify the existing plot.
+#'
+#' @examples
+#' # Basic usage with a simple vector
+#' x <- rnorm(100)
+#' plot(x, type = "n")
+#' range_frame_axis(x, sides = c("bottom", "left"), draw_lines = TRUE)
+#'
+#' # Using logarithmic scale
+#' x <- rexp(100)
+#' plot(x, log = "y", type = "n")
+#' range_frame_axis(x, sides = c("left", "bottom"), draw_lines = TRUE)
+#'
+#' # Create range frame plot with custom font
+#' x <- mtcars$wt
+#' y <- mtcars$mpg
+#' set_font("Alegreya")
+#' plot.new()
+#' plot.window(range(x),range(y))
+#' points(x,y, pch = 18, col = "black")
+#' range_frame_axis(y,"left")
+#'  range_frame_axis(x,"bottom")
+#' mtext(
+#'       "Car weight (lb/1000) v. \nMiles per gallon",
+#'       side = 3,
+#'       at = 4,
+#'       line = -4.5,
+#'       adj = 0,
+#'       cex = 1.2,
+#'       col = "black"
+#'   )
+#'
+#' @seealso \code{\link{axis}}, \code{\link{summary}}, \code{\link{lines}}
+#'
+#' @export
+
 range_frame_axis <- function(.x,
-                             sides = c("bottom","left"),
+                             sides = "bottom",
                          at = NULL,
                          draw_lines = FALSE,
-                         line_width = 0.5,
+                         line_width = 0,
                          tick_width = 0.7,
                          tick_gap = 0.5,
                          tick_length = -0.5,
@@ -220,17 +367,14 @@ range_frame_axis <- function(.x,
     axis(side, ticks,
          labels = FALSE,
          col = "gray50",
-         lwd = 0,
+         lwd = line_width,
          tcl = tick_length,
          col.tick = tick_color,
-         lwd.tick = tick_width)
+         lwd.tick = tick_width,
+         ...)
 
     # Define `las` separately for x and y axes
-    las_value <- if (side %in% c(1, 3)){
-      1
-    }else{
-      2
-    }
+    las_value <- if (side %in% c(1, 3)) 1 else 2
 
     # Add the labels, making the mean label red
     for (i in seq_along(ticks)) {
@@ -266,8 +410,162 @@ range_frame_axis <- function(.x,
     }
   }
 }
+#' Draw Minimal Rug Axis with Selective Labeling
+#'
+#' This function adds a minimalist axis with rug ticks and selective labeling to a plot.
+#' It allows for customized control over tick marks, tick lengths, label spacing, and
+#' highlighting of key summary statistics or specific values, such as the mean.
+#'
+#' @param .x A numeric vector. The data used for the axis ticks and labels.
+#' @param sides A character vector indicating which sides of the plot to draw the axis on.
+#'   Options are `"bottom"`, `"left"`, `"top"`, and `"right"`. Default is `"bottom"`.
+#' @param at Optional. A numeric vector specifying the exact positions for ticks.
+#'   If `NULL`, the function uses the values from `.x`.
+#' @param line_width Numeric. The width of the axis line. Default is `0` (no line).
+#' @param tick_width Numeric. The width of the tick marks. Default is `0.7`.
+#' @param tick_length Numeric. The length of the tick marks as a fraction of the plot dimension.
+#'   Default is `0.5`.
+#' @param tick_color Character. The color of the tick marks. Default is `"black"`.
+#' @param mean_color Character. The color used to highlight the mean value label. Default is `"red"`.
+#' @param label_every_n Integer. Optional. If specified, labels will be drawn at every `n`-th tick.
+#'   Default is `NULL`, meaning labels are determined dynamically.
+#' @param label_summ_stats Logical. If `TRUE`, only summary statistics (`min`, `Q1`, `median`,
+#'   `mean`, `Q3`, `max`) will be labeled. If `FALSE`, labels will be determined based on spacing.
+#'   Default is `FALSE`.
+#' @param label_gap Numeric. The minimum spacing between labels to prevent overlap.
+#'   Expressed as a multiplier of the median spacing between values. Default is `1.5`.
+#' @param digits Integer. The number of decimal places to round the labels. Default is `2`.
+#' @param ... Additional graphical parameters passed to the `axis()` function.
+#'
+#' @details
+#' The function draws rug ticks on specified sides of the plot using the values from `.x`
+#' or the positions defined in `at`. It includes options for drawing only specific labels
+#' (like summary statistics) or dynamically adjusting the labels to avoid overcrowding.
+#'
+#' If `label_summ_stats = TRUE`, the function will label only the minimum, first quartile,
+#' median, mean, third quartile, and maximum values. Otherwise, it will label values
+#' based on spacing criteria defined by `label_gap`.
+#'
+#' The function uses `mtext()` to add labels and `axis()` to draw ticks without a full axis line,
+#' allowing for a clean, minimalist appearance similar to Edward Tufte's style.
+#'
+#' @return The function is used for its side effects (drawing on the existing plot). It does not
+#' return a value.
+#'
+#' @examples
+#' #' set_font("Alegreya")
+#' plot.new()
+#' plot.window(range(mtcars$wt),range(mtcars$mpg))
+#' points(mtcars$wt,mtcars$mpg, pch = 21, col = "black")
+#' minimal_rug_axis(mtcars$wt, sides = "bottom", tick_length = 0.75, label_summ_stats = TRUE)
+#' minimal_rug_axis(mtcars$mpg, sides = "left", label_summ_stats = TRUE)
+#' mtext(
+#'   "Car weight (lb/1000) v. \nMiles per gallon",
+#'   side = 3,
+#'   at = 4.55,
+#'   line = -4.5,
+#'   adj = 0,
+#'   cex = 1.2,
+#'   col = "black",
+#'   font = 3
+#' )
+#'
+#' @seealso \code{\link{axis}}, \code{\link{mtext}}, \code{\link{rug}}
+#' @export
+#'
+minimal_rug_axis <- function(.x,
+                             sides = "bottom",
+                             at = NULL,
+                             line_width = 0,
+                             tick_width = 0.7,
+                             tick_length = 0.5,
+                             tick_color = "black",
+                             mean_color = "red",
+                             label_every_n = NULL,
+                             label_summ_stats = FALSE,
+                             label_gap = 1.5,
+                             digits = 2,...){
 
+  sides <- match.arg(sides,
+                     c("bottom","left",
+                       "top","right"),
+                     several.ok = TRUE)
 
+  stopifnot(
+    is.character(sides),
+    is.numeric(line_width),
+    is.numeric(tick_width),
+    is.numeric(tick_width),
+    is.character(tick_color),
+    is.character(mean_color),
+    is.numeric(label_gap)
+  )
+
+  # Recon sides to be plotted
+  side_map <- c(bottom = 1, left = 2,
+                top = 3, right = 4)
+  numeric_sides <- side_map[sides]
+
+  #Compute summary stts
+  summ_stats <- as.numeric(summary(.x))
+  x_mean <- mean(.x)
+
+  side_map <- c(bottom = 1, left = 2, top = 3, right = 4)
+  numeric_sides <- side_map[sides]
+
+  # Handle tick positions
+  ticks <- if (is.null(at)) .x else at
+
+  # Handle side parameters and tick marks
+  for (side in numeric_sides) {
+    # Draw the tick marks (rug plot)
+    axis(side,
+         at = ticks,
+         labels = FALSE,
+         lwd = line_width,
+         tcl = tick_length,
+         col.tick = tick_color,
+         lwd.tick = tick_width,
+         ...)
+
+    # Define label orientation based on axis side
+    las_value <- if (side %in% c(1, 3)) 1 else 2
+
+    # Determine labels to draw based on `label_summ_stats` or dynamic spacing
+    labels_to_draw <- if (label_summ_stats) {
+      summ_stats
+    } else {
+      ticks
+    }
+
+    # Dynamically skip labels to prevent overlap
+    if (!label_summ_stats && length(labels_to_draw) > 1) {
+      label_positions <- labels_to_draw
+      label_spacing <- abs(diff(label_positions))
+      median_spacing <- median(label_spacing)
+      labels_to_draw <- labels_to_draw[c(TRUE, diff(labels_to_draw) > label_gap * median_spacing)]
+    }
+
+    # Draw selective labels with appropriate gaps
+    for (stat in labels_to_draw) {
+      # Determine label color for mean vs. other statistics
+      label_color <- if (round(stat, digits) == round(x_mean, digits)) mean_color else "black"
+
+      # Draw labels using `mtext`
+      mtext(
+        text = round(stat, digits),
+        side = side,
+        at = stat,
+        line = 0.85,
+        las = las_value,
+        col = label_color,
+        cex = 0.9
+      )
+    }
+  }
+}
+
+marginal_hist_axis <- function(.x,){}
 
 
 
