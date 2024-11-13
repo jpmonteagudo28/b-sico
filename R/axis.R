@@ -229,7 +229,8 @@ range_frame_axis <- function(.x,
                          mean_color = "red",
                          axis_gap = 0.05,
                          median_gap = 0.05,
-                         digits = 2,...){
+                         digits = 2,
+                         ...){
 
   sides <- match.arg(sides,
                    c("bottom","left",
@@ -383,7 +384,6 @@ range_frame_axis <- function(.x,
 
       label_color <- if(ticks[i] == round(x_mean, digits)){
         mean_color
-
       }  else {
           "black"}
 
@@ -474,7 +474,7 @@ range_frame_axis <- function(.x,
 #'
 #' @seealso \code{\link{axis}}, \code{\link{mtext}}, \code{\link{rug}}
 #' @export
-#'
+
 minimal_rug_axis <- function(.x,
                              sides = "bottom",
                              at = NULL,
@@ -486,7 +486,8 @@ minimal_rug_axis <- function(.x,
                              label_every_n = NULL,
                              label_summ_stats = FALSE,
                              label_gap = .85,
-                             digits = 2,...){
+                             digits = 2,
+                             ...){
 
   sides <- match.arg(sides,
                      c("bottom","left",
@@ -507,6 +508,7 @@ minimal_rug_axis <- function(.x,
   side_map <- c(bottom = 1, left = 2,
                 top = 3, right = 4)
   numeric_sides <- side_map[sides]
+
 
   #Compute summary stts
   summ_stats <- as.numeric(summary(.x))
@@ -566,26 +568,73 @@ minimal_rug_axis <- function(.x,
     }
   }
 }
+#' Add Marginal Histograms or Stripcharts to Plot Axes
+#'
+#' This function adds marginal histograms or stripcharts (depending on input) to the sides of an existing plot. The function allows for customization of the appearance of the histograms or stripcharts, including adjustments to axis labels, axis positioning, and summary statistics.
+#'
+#' @param .x A numeric vector. The data to be plotted in the marginal histogram or stripchart.
+#' @param side A character string indicating which side of the plot the axis should be drawn on. Options are: "bottom", "left", "top", or "right".
+#' @param scale_shift A numeric value to control the horizontal or vertical shift of the stripchart elements. Default is 0.15.
+#' @param mean_shift A numeric value to control the shift of the mean label from its default position. Default is 0.5.
+#' @param stack_color A character string specifying the color of the stripchart points. Default is "red".
+#' @param mean_color A character string specifying the color of the mean line or label. Default is "red".
+#' @param axis_gap A numeric value to control the gap between the plot axis and the stripchart or histogram. Default is 0.005.
+#' @param point_character A numeric value specifying the plotting symbol to use for the stripchart points. Default is 15 (solid circle).
+#' @param point_size A numeric value specifying the size of the points in the stripchart. Default is 0.15.
+#' @param label_gap A numeric value to control the gap between the labels and the axis. Default is 0.45.
+#' @param label_summ_stats A logical value. If `TRUE`, the function will display summary statistics (mean, median, etc.) as labels. Default is `FALSE`.
+#' @param digits An integer specifying the number of digits to round the labels to. Default is 2.
+#' @param na.rm A logical value. If `TRUE`, missing values are removed before processing the data. Default is `TRUE`.
+#' @param ... Additional arguments passed to other functions (such as `stripchart`).
+#'
+#' @return This function does not return a value. It modifies the existing plot by adding a marginal histogram or stripchart.
+#'
+#' @details
+#' The function adds a stripchart to the specified axis side, and it can display summary statistics (e.g., mean, median, quartiles) on the plot. The `side` argument determines which axis the marginal plot is drawn on, and the plot type can be customized using the `stack_color`, `point_character`, and `mean_color` arguments.
+#'
+#' If `label_summ_stats` is `TRUE`, summary statistics are drawn as labels along the axis. The `digits` argument controls the precision of these labels.
+#'
+#' The function makes adjustments to the plot's margins and axis positions to avoid overlap and ensure a clean presentation.
+#'
+#' @seealso \code{link{stripchart()}}, \code{\link{summary()}}, \code{\link{par()}}
+#'
+#' set_font("Alegreya")
+#' x <- faithful$waiting
+#' y <- faithful$eruptions
+#' plot.new()
+#' plot.window(c(min(x)/1.1,max(x)),
+#'             c(min(y)/1.5, max(y))))
+#' points(x,y, pch = 16, cex = 0.75)
+#' marginal_hist_axis(x,side = "bottom",
+#'               label_summ_stats = TRUE)
+#' marginal_hist_axis(y, side = "left",
+#'                label_summ_stats = TRUE)
+#'
+#' mtext("Time till next eruption (min)", side = 1, line = 2, col = "black")
+#'
+#' mtext("Duration (sec)", side = 2, line = 2, col = "black")
+#' #' @export
 
 marginal_hist_axis <- function(.x,
                                side,
-                               scale_shift = 0.35,
+                               scale_shift = 0.15,
                                mean_shift = 0.5,
                                stack_color = "red",
                                mean_color = "red",
                                axis_gap = 0.005,
                                point_character = 15,
-                               label_gap = .85,
-                               label_every_n = NULL,
+                               point_size = 0.15,
+                               label_gap = .45,
                                label_summ_stats = FALSE,
                                digits = 2,
+                               na.rm = TRUE,
                                ...
-                              ){
+){
 
   side <- match.arg(side,
-                     c("bottom","left",
-                       "top","right"),
-                     several.ok = TRUE)
+                    c("bottom", "left",
+                      "top", "right"),
+                    several.ok = FALSE)
 
   stopifnot(
     is.character(side),
@@ -595,98 +644,67 @@ marginal_hist_axis <- function(.x,
     is.character(stack_color)
   )
 
-  # Compute summary stts
+  .x <- if(na.rm) .x[complete.cases(.x)] else .x
+
+  # Compute summary stats
   summ_stats <- as.numeric(summary(.x))
   x_mean <- mean(.x)
 
   # Recon sides to be plotted
   side_map <- c(bottom = 1, left = 2,
                 top = 3, right = 4)
-  side_index <- side_map[side]
+  numeric_sides <- side_map[side]
 
-  # Define properties for each axis side
-  # in the following order (b,l,t,r)
-  flip_choice <- c(1, 1, -1, -1) # Use to place labels in/outside plot margin
-  x_axis_choice <- c(TRUE, FALSE, TRUE, FALSE) # Use to work in x or y axes
-  usr_indices <- c(3, 1, 4, 2) # Extreme user coord. of plotting region
+  for(side in numeric_sides){
 
-  # Handle side pars and tick marks
-  # Extract the relevant values based on the 'side'
-  flip <- flip_choice[side_index]
-  x_axis <- x_axis_choice[side_index]
-  par_side <- usr_indices[side_index]
+    # Define properties for each axis side
+    flip_choice <- c(1, 1, -1, -1)
+    x_axis_choice <- c(TRUE, FALSE, TRUE, FALSE)
+    usr_indices <- c(3, 1, 4, 2)
 
-    # Check if the axis is logarithmic
-  is_log <- if (x_axis) par("xlog") else par("ylog")
-  if (is_log) base <- 10^base
+    flip <- flip_choice[side]
+    x_axis <- x_axis_choice[side]
+    par_side <- usr_indices[side]
 
-    # Calculate the axis base position and dimensions
     base <- par("usr")[par_side]
+    is_log <- if (x_axis) par("xlog") else par("ylog")
+    if (is_log) base <- 10^base
     plot_width <- diff(par("usr")[1:2])
     plot_height <- diff(par("usr")[3:4])
     char_width <- par("cin")[1]
     char_height <- par("cin")[2]
 
-    # Calculate the shifts away from the axis at each of
-    # these points
-    axis_shift <- par("pin")[1]*axis_gap*flip
-    median_gap <- par("pin")[1]*axis_gap
-    mean_shift <- char_width * mean_shift * flip
-    strip_shift <- char_width * scale_shift*flip
+    raw_axis_shift <- par("pin")[1]*axis_gap*flip
+    raw_median_gap <- par("pin")[1]*axis_gap
+    raw_mean_shift <- char_width * mean_shift * flip
+    raw_strip_shift <- char_width * scale_shift*flip
 
-    # Unified scaling adjustment
-    axis_shift <- scale_shift(axis_shift,
-                         axis = if (!x_axis) "y" else "x",
-                         plot_width,
-                         plot_height)
-    mean_shift <- scale_shift(mean_shift,
-                             axis = if (!x_axis) "y" else "x",
-                             plot_width,
-                             plot_height)
-    strip_shift <- scale_shift(strip_shift,
-                              axis = if (!x_axis) "y" else "x",
-                              plot_width,
-                              plot_height)
-    median_gap <- scale_shift(median_gap,
-                              axis = if (!x_axis) "x" else "y",
-                              plot_width,
-                              plot_height,
-                              is_gap = TRUE)
+    axis_shift <- shift_scale(raw_axis_shift, axis = if (!x_axis) "y" else "x", plot_width, plot_height)
+    mean_shift <- shift_scale(raw_mean_shift, axis = if (!x_axis) "y" else "x", plot_width, plot_height)
+    strip_shift <- shift_scale(raw_strip_shift, axis = if (!x_axis) "y" else "x", plot_width, plot_height)
+    median_gap <- shift_scale(raw_median_gap, axis = if (!x_axis) "y" else "x", plot_width, plot_height, is_gap = TRUE)
 
-    # Correct offset for stripchart's handling of character width/height
     offset <- if (!x_axis) flip * char_height/char_width else flip
 
-
-    # Ensure elements are not clipped
-    old_xpd <- par(xpd = TRUE)
+    old_xpd <- par("xpd")
     on.exit(par(xpd = old_xpd))
 
+    # Adjust vertical based on the axis
     stripchart(.x,
                method = "stack",
-               vertical = !x_axis,
+               vertical = !x_axis, # FALSE for X-axis, TRUE for Y-axis
                offset = offset,
                pch = point_character,
-               cex = 0.5,
+               cex = point_size,
                add = TRUE,
                at = base + axis_shift + strip_shift,
                col = stack_color)
 
-    # Define label orientation based on axis side
     las_value <- if (side %in% c(1, 3)) 1 else 2
 
-    # Determine labels based on user choice
-    labels_to_draw <- if (label_summ_stats) {
-      # Use summary statistics for labels
-      summ_stats
-    } else if (!is.null(label_every_n)) {
-      # Label every `n`-th value in the data
-      seq(min(.x), max(.x), by = label_every_n)
-    } else {
-      # Default to no labels
-      return()
-    }
+    labels_to_draw <- if (label_summ_stats) summ_stats
+    else  pretty(range(.x), n = 5)
 
-    # Dynamically skip labels to prevent overlap
     if (!label_summ_stats && length(labels_to_draw) > 1) {
       label_positions <- labels_to_draw
       label_spacing <- abs(diff(label_positions))
@@ -694,23 +712,19 @@ marginal_hist_axis <- function(.x,
       labels_to_draw <- labels_to_draw[c(TRUE, diff(labels_to_draw) > label_gap * median_spacing)]
     }
 
-    # Draw selective labels with appropriate gaps
     for (stat in labels_to_draw) {
-      # Determine label color for mean vs. other statistics
       label_color <- if (round(stat, digits) == round(x_mean, digits)) mean_color else "black"
-
-      # Draw labels using `mtext`
-      mtext(
-        text = round(stat, digits),
-        side = side,
-        at = stat,
-        line = 0.85,
-        las = las_value,
-        col = label_color,
-        cex = 0.9
-      )
+      mtext(text = round(stat, digits),
+            side = side,
+            at = stat,
+            line = 0.85,
+            las = las_value,
+            col = label_color,
+            cex = 0.9)
     }
+  }
 }
+
 
 
 

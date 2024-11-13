@@ -112,7 +112,7 @@ adjust_axis_ticks <- function(ticks, x_min, x_max, gap,
 
 
 # Adjust lengths to ensure both axes scale equally on the output device
-scale_shift <- function(value, axis, plot_width, plot_height, is_gap = FALSE) {
+shift_scale <- function(value, axis, plot_width, plot_height, is_gap = FALSE) {
   # Adjust shift based on whether it applies to the axis or to a gap
   if (axis == "y") {
     if (is_gap) {
