@@ -166,6 +166,7 @@ format_axis <- function(.x,format,digits = NULL,...){
 #'   Used for both linear and logarithmic scales. Defaults to `0.05`.
 #' @param digits Integer specifying the number of decimal places to round the tick labels.
 #'   Defaults to `2`.
+#'   @param label_size size of axis labels to be passed to `mtext`. Defaults to `0.9`
 #' @param ... Additional arguments to be passed to other plotting functions.
 #'
 #' @details
@@ -213,6 +214,42 @@ format_axis <- function(.x,format,digits = NULL,...){
 #'       col = "black"
 #'   )
 #'
+#'
+#'x <- datasets::Puromycin$conc
+#'y <- datasets::Puromycin::rate
+#'
+#' set_font("Cormorant)
+#' plot.new()
+#' plot.window(range(x), range(y))
+#'
+#' # Fit a loess regression model
+#' loess_fit <- loess(y ~ x)
+#' pred <- predict(loess_fit, interval = "confidence", level = 0.95)
+#'
+#' # Generate predictions along with confidence intervals
+#' pred <- predict(loess_fit, se = TRUE)
+#' x_seq <- seq(min(x), max(x), length.out = length(x))
+#'
+#' # Extract fitted values and confidence intervals
+#' y_fit <- pred$fit
+#' ci_upper <- y_fit + 1.96 * pred$se.fit
+#' ci_lower <- y_fit - 1.96 * pred$se.fit
+#'
+#' # Add the smooth line
+#'  lines(x_seq, y_fit, col = "red", lwd = 2)
+#'
+#' # Add confidence interval as a shaded area
+#' polygon(c(x_seq, rev(x_seq)),
+#'        c(ci_upper, rev(ci_lower)),
+#'       col = adjustcolor("lightpink", alpha.f = 0.3), border = NA)
+#' # Add plot title
+#' mtext(
+#'   text = "Predicted Reaction rate (min) vs.\nConcentration (ppm) \nof Puromycin",
+#'  side = 3,
+#'  at = c(180, 0.56),
+#'  line = -8,
+#'  col = "black"
+#')
 #' @seealso \code{\link{axis}}, \code{\link{summary}}, \code{\link{lines}}
 #'
 #' @export
@@ -230,6 +267,7 @@ range_frame_axis <- function(.x,
                          axis_gap = 0.05,
                          median_gap = 0.05,
                          digits = 2,
+                         label_size = 0.9,
                          ...){
 
   sides <- match.arg(sides,
@@ -396,7 +434,7 @@ range_frame_axis <- function(.x,
         line = 0.85,
         las = las_value,
         col = label_color,
-        cex = 0.9
+        cex = label_size
       )
     }
 
@@ -628,8 +666,7 @@ marginal_hist_axis <- function(.x,
                                label_summ_stats = FALSE,
                                digits = 2,
                                na.rm = TRUE,
-                               ...
-){
+                               ...){
 
   side <- match.arg(side,
                     c("bottom", "left",
