@@ -1,7 +1,7 @@
 #' Edward Tufte Style Boxplot
 #'
-#' Draws a minimalist boxplot inspired by Edward Tufte's visualization principles. 
-#' The function supports customization for horizontal or vertical orientation, 
+#' Draws a minimalist boxplot inspired by Edward Tufte's visualization principles.
+#' The function supports customization for horizontal or vertical orientation,
 #' additional mean markers, and labeled groups.
 #'
 #' @param formula A formula of the form `y ~ x`, where `y` is the grouping variable, and `x` is the numeric variable(s).
@@ -35,10 +35,14 @@
 #' @examples
 #' # Basic Example
 #' data(mtcars)
-#' box_plot(mpg ~ cyl, .data = mtcars, main = "MPG by Cylinder")
+#' box_plot(cyl~ mpg, .data = mtcars, main = "MPG by Cylinder")
 #'
 #' # Horizontal Example with Mean Marker
-#' box_plot(mpg ~ cyl, .data = mtcars, horizontal = TRUE, add_mean = TRUE)
+#' box_plot(Diet~weight, .data = ChickWeight,
+#' horizontal = FALSE, median_symbol = "×",
+#' add_mean = TRUE, n_ticks = 7,
+#' ylab = "Diet",
+#' xlab = "Weight(g)")
 #'
 #' @export
 
@@ -73,134 +77,134 @@ box_plot <- function(formula,
     is.logical(add_mean),
     is.numeric(outlier_size)
   )
-  
+
   # Extract the dependent variable (LHS of the formula)
   group_var <- as.character(formula[[2]])
-  
+
   if (!is.formula(formula))
     stop("Please, provide a valid formula object of the form 'y~x'")
-  
+
   rhs_vars <- all.vars(formula[[3]])
   n_vars <- length(all.vars(formula))
-  
+
   # Handle "." in RHS
   if (length(rhs_vars) == 1 && rhs_vars == ".") {
     rhs_vars <- setdiff(names(.data), group_var)
   }
-  
+
   # Get the default pars
   op <- par(no.readonly = TRUE)
-  
+
   for (iv in rhs_vars) {
     x <- .data[[iv]]
     y <- .data[[group_var]]
-    
+
     # Ensure valid data
     valid_data <- complete.cases(x,y)
     y <- y[valid_data]
     x <- x[valid_data]
-    
+
     # Convert grouping variable to factor if necessary
     if (!is.factor(y)) {
       y <- as.factor(y)
     }
     n_levels <- nlevels(y)
-    
+
     if(labels){
-      par(mar=c(5,12,4,2) + 0.1)
+      par(mar=c(6,13,5,3) + 0.1)
     }
-    
+
     # Start plotting
     plot.new()
-    
+
     if (horizontal) {
       plot.window(range(x), c(0.5, n_levels + 0.5))
     } else {
       plot.window(c(0.5, n_levels + 0.5), range(x))
     }
-    
+
     for (i in seq_len(n_levels)) {
       level <- levels(y)[i]
       x_subset <- x[y == level]  # Subset x by the level of y
-      
+
       # Calculate boxplot stats for this level
       stats <- calculate_box_stats(x_subset, add_mean = add_mean)
-      
+
       if (horizontal) {
-        
+
         # Horizontal boxplot
         segments(stats$lower_whisker, i, stats$q1, i, lwd = 1, col = line_color)
         segments(stats$q3, i, stats$upper_whisker, i, lwd = 1, col = line_color)
-        
+
         points(stats$median, i, pch = median_symbol, cex = 0.851, col = median_color)
-        
+
         if (add_mean) {
           points(stats$mean, i, pch = mean_symbol, cex = 0.851, col = mean_color)
         }
-        
+
         if (length(stats$outliers) > 0) {
           points(stats$outliers, rep(i, length(stats$outliers)),
                  pch = outlier_symbol, cex = outlier_size, col = line_color)
         }
       } else {
-        
+
         # Vertical boxplot
         segments(i, stats$lower_whisker, i, stats$q1, lwd = 1, col = line_color)
         segments(i, stats$q3, i, stats$upper_whisker, lwd = 1, col = line_color)
-        
+
         points(i, stats$median, pch = median_symbol, cex = 0.851, col = median_color)
-        
+
         if (add_mean) {
           points(i, stats$mean, pch = mean_symbol, cex = 0.851, col = mean_color)
         }
-        
+
         if (length(stats$outliers) > 0) {
           points(rep(i, length(stats$outliers)), stats$outliers,
                  pch = outlier_symbol, cex = outlier_size, col = line_color)
         }
       }
     }
-    
+
     # Add labels
     if (labels) {
       label_names <- label_names %||% levels(y)
-      
+
       if (horizontal) {
-        axis(2, 
-             at = seq_len(n_levels), 
-             labels = label_names, 
-             cex.axis = label_size, 
-             las = 1, 
-             lwd = 0, 
+        axis(2,
+             at = seq_len(n_levels),
+             labels = label_names,
+             cex.axis = label_size,
+             las = 1,
+             lwd = 0,
              tcl = 0,
              ...)
-        
-        axis(1, 
-             at = pretty(range(x, na.rm = TRUE), n = n_ticks), 
+
+        axis(1,
+             at = pretty(range(x, na.rm = TRUE), n = n_ticks),
              cex.axis = label_size,
-             lwd = 0, 
+             lwd = 0,
              tcl = -0.03,
              ...)
-        
+
       } else {
-        axis(1, 
-             at = seq_len(n_levels), 
-             labels = label_names, 
-             cex.axis = label_size, 
-             las = 1, 
-             lwd = 0, 
+        axis(1,
+             at = seq_len(n_levels),
+             labels = label_names,
+             cex.axis = label_size,
+             las = 1,
+             lwd = 0,
              tcl = 0,
              ...)
-        axis(2, 
-             at = pretty(range(x, na.rm = TRUE), n = n_ticks), 
-             cex.axis = label_size, 
-             lwd = 0, 
+        axis(2,
+             at = pretty(range(x, na.rm = TRUE), n = n_ticks),
+             cex.axis = label_size,
+             lwd = 0,
              tcl = -0.03,
              las = 1,
              ...)
       }
     }
-    
+
     if (!is.null(main)) {
       title(main = main, line = in_line , ...)  # Add title with adjustable line spacing
     }
@@ -243,17 +247,17 @@ box_plot <- function(formula,
 #'
 #' @export
 #'
-calculate_box_stats <- function(.data, 
+calculate_box_stats <- function(.data,
                                 add_mean = TRUE,
                                 na_rm = TRUE){
-  
+
   stopifnot(is.numeric(.data) || is.data.frame(.data))
-  
+
   q1 <- quantile(.data,.25, na.rm = na_rm)
   q3 <- quantile(.data,.75, na.rm = na_rm)
   median <- median(.data,na.rm = na_rm)
   iqr <- q3 - q1
-  lower_whisker <- max(min(.data, 
+  lower_whisker <- max(min(.data,
                            na.rm = na_rm), q1 - 1.5*iqr,
                        na.rm = na_rm)
   upper_whisker <- min(max(.data,
@@ -262,16 +266,16 @@ calculate_box_stats <- function(.data,
   outliers <- na.omit(
     .data[.data < lower_whisker | .data > upper_whisker]
   )
-  
+
   stats <-  list(q1 = q1, q3 = q3,
                  median = median,
                  lower_whisker = lower_whisker,
                  upper_whisker = upper_whisker,
                  outliers = outliers)
-  
+
   if (add_mean) {
     stats$mean <- mean(.data, na.rm = na_rm)
   }
-  
+
   return(stats)
 }
