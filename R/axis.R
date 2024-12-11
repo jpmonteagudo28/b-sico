@@ -67,7 +67,7 @@ basic_axis <- function(format = "integer",
     }
 
     # Format tick labels
-    formatted_labels <- format_axis(ticks, format)
+    formatted_labels <- format_labels(ticks, format)
 
     axis_args <- c(
       list(
@@ -120,7 +120,7 @@ basic_axis <- function(format = "integer",
 #' @seealso \code{\link{basic_axis}}
 #' @export
 
-format_axis <- function(.x,format,digits = NULL,...){
+format_labels <- function(.x,format,digits = NULL,...){
 
   .x <- switch(format,
                percent = sprintf("%1.0f%%", 100 * .x),
@@ -467,7 +467,6 @@ range_frame_axis <- function(.x,
 #'   Default is `0.5`.
 #' @param tick_color Character. The color of the tick marks. Default is `"black"`.
 #' @param mean_color Character. The color used to highlight the mean value label. Default is `"red"`.
-#' @param label_every_n Integer. Optional. If specified, labels will be drawn at every `n`-th tick.
 #'   Default is `NULL`, meaning labels are determined dynamically.
 #' @param label_summ_stats Logical. If `TRUE`, only summary statistics (`min`, `Q1`, `median`,
 #'   `mean`, `Q3`, `max`) will be labeled. If `FALSE`, labels will be determined based on spacing.
@@ -521,9 +520,8 @@ minimal_rug_axis <- function(.x,
                              tick_length = 0.5,
                              tick_color = "black",
                              mean_color = "red",
-                             label_every_n = NULL,
                              label_summ_stats = FALSE,
-                             label_gap = .85,
+                             label_gap = 1.5,
                              digits = 2,
                              ...){
 
@@ -551,9 +549,6 @@ minimal_rug_axis <- function(.x,
   #Compute summary stts
   summ_stats <- as.numeric(summary(.x))
   x_mean <- mean(.x)
-
-  side_map <- c(bottom = 1, left = 2, top = 3, right = 4)
-  numeric_sides <- side_map[sides]
 
   # Handle tick positions
   ticks <- if (is.null(at)) .x else at
@@ -641,7 +636,7 @@ minimal_rug_axis <- function(.x,
 #' y <- faithful$eruptions
 #' plot.new()
 #' plot.window(c(min(x)/1.1,max(x)),
-#'             c(min(y)/1.5, max(y))))
+#'             c(min(y)/1.5, max(y)))
 #' points(x,y, pch = 16, cex = 0.75)
 #' marginal_hist_axis(x,side = "bottom",
 #'               label_summ_stats = TRUE)
