@@ -170,3 +170,13 @@ any_zero_negative <- function(x) any(x <= 0)
 
 any_negative <- function(x) any(x < 0L)
 
+#---- --- ---- --- ---- --- ---- --- ---- --- ---- --- ----#
+rid_na <- function(x){
+  x <- x[!is.na(x)]
+  return(x)
+}
+
+keep_finite <- function(x){
+  x <- x[is.finite(x)]
+  return(x)
+}

@@ -35,8 +35,8 @@
 # Aspects to take care of:
 # 1. Frequency (sample size per bin) - done
 # 2. Number of bins - done
-# 3. Bin width
-# 4. Total area of histogram equal to 1 or not - density argument (freq = FALSE)
+# 3. Bin width - done
+# 4. Total area of histogram equal to 1 or not - density(freq = FALSE) - done
 histogram <- function(x,...)
   UseMethod("histogram")
 
@@ -75,10 +75,10 @@ histogram.default <- function(x,
 
   # Remove NA
   if(na_rm){
-    x <- x[!is.na(x)]
+    x <- rid_na(x)
   }
   # Remove Inf,-Inf
-  x <- x[is.finite(x)]
+  x <- keep_finite(x)
 
   n <- length(x)
 
@@ -157,13 +157,36 @@ histogram.default <- function(x,
   }
   mid_points <- 0.5 * (breaks[-1L] + breaks[-n_breaks])
 
-  data_structure <- structure(
+  data_structure <- structure(list(
     breaks = breaks,
     counts = counts,
     density = density,
-    mid_points = mid_points,
+    mid_points = mid_points),
     class = "histogram"
   )
+
+  #---- --- ----- --- ---- --- ----#
+  # Add more margin space for labels
+  if(labels){
+    par(mar=c(9,5,5,3) + 0.1)
+  }
+
+  # Define plot arguments before plotting
+  xlim <- range(x)
+  y <- ifelse(freq,data_structure$counts,data_structure$density)
+  ylim <- (range(y))
+  n_breaks <- data_structure$breaks
+
+
+
+  plot.new()
+  plot.window(xlim = xlim,ylim = ylim)
+
+
+
+
+
+
 
 
 
