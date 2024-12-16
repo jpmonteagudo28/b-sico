@@ -43,9 +43,10 @@ histogram <- function(x,...)
 
 histogram.default <- function(x,
                       na_rm = TRUE,
-                      breaks = "Scott", # used to compute number of bins
+                      breaks = "scott", # used to compute number of bins
                       freq = TRUE, # if FALSE, histogram will display density on y-axis
-                      closed_on = "right",
+                      right= TRUE,
+                      fuzz = NULL,
                       include_lowest = TRUE,
                       labels = TRUE,
                       label_names = NULL,
@@ -54,10 +55,10 @@ histogram.default <- function(x,
                       in_line = 1,
                       xlab = NULL,
                       ylab = NULL,
-                      n_ticks = NULL,
-                      axis_type = NULL,
+                      line_width = NULL,
                       line_type = "solid",
-                      line_color = "gray20"
+                      line_color = "gray20",
+                      ...
 ){
 
   stopifnot(is.numeric(x),
@@ -65,8 +66,6 @@ histogram.default <- function(x,
             is.logical(freq),
             is.logical(include_lowest),
             is.logical(labels))
-
-  closed_on <- match.arg(closed_on,c("right","left"))
 
   # Check for identical data points
   if(all_the_same(x)){
@@ -77,8 +76,13 @@ histogram.default <- function(x,
   if(na_rm){
     x <- rid_na(x)
   }
+
+  if(is_empty_object(x))
+    stop("Data only contained NA values. Provide a valid numeric object or dataset ")
+
   # Remove Inf,-Inf
   x <- keep_finite(x)
+
 
   n <- length(x)
 
@@ -86,42 +90,30 @@ histogram.default <- function(x,
 
   if(!use_breaks){
     warning("Using Scott's normal reference rule to compute breaks")
-    breaks <- scott_breaks(n)
+    breaks <- scott_breaks(x)
+    breaks <- pretty(range(x),n = breaks)
   }
 
-  if(use_breaks){
-
-    if(!is.finite(breaks) || length(breaks) < 1L){
-      stop("Invalid number of breaks")
-    }
-    else if(is.numeric(breaks) && length(breaks) == 1L){
-      breaks <- pretty(range(x),n = breaks,min.n = 1)
-      n_breaks<- length(breaks)
-    }
-    else if(is.numeric(breaks) && length(breaks) > 1L){
-      breaks <- sort(breaks)
-      n_breaks <- length(breaks)
-    }
-  }
-    else if(is.character(breaks)){
-
-    breaks <- match.arg(breaks,
-                        c("sturges","doane",
-                          "scott","fd","ts"))
-
+  if (is.character(breaks)) {
+    breaks <- match.arg(breaks, c("sturges", "doane", "scott", "fd", "ts"))
     breaks <- switch(breaks,
                      sturges = sturges_breaks(x),
                      doane = doane_breaks(x),
                      scott = scott_breaks(x),
                      fd = fd_breaks(x),
                      ts = ts_breaks(x))
-    }
-  else if (is.function(breaks)) {
+    breaks <- pretty(range(x), n = breaks)
+  } else if (is.numeric(breaks) && length(breaks) == 1L) {
+    breaks <- pretty(range(x), n = breaks, min.n = 1)
+  } else if (is.numeric(breaks) && length(breaks) > 1L) {
+    breaks <- sort(breaks)
+  } else if (is.function(breaks)) {
     breaks <- breaks(x)
   } else {
     stop("Invalid breaks specification")
   }
 
+  n_breaks <- length(breaks)
   bin_width <- diff(breaks) # Preferred over diff(range(x))/breaks, which gives only an average
   bin_width_range <- diff(range(bin_width)) # constant difference - linear seq.
   # Check if bin widths are equidistant if not specified by the user and constant difference of 0
@@ -137,24 +129,20 @@ histogram.default <- function(x,
   if (!is.finite(fuzz)) { # happens when 0 or 1 finite breaks are given
     fuzz <- .Machine$double.eps * 1e3
   }
-  if (closed_on == "right") {
+  if (right) {
     fuzzes <- c(-fuzz, rep.int(fuzz, n_breaks - 1))
   } else {
     fuzzes <- c(rep.int(-fuzz, n_breaks - 1), fuzz)
   }
   fuzzy <- breaks + fuzzes
 
-  if(freq){
-    counts <- cut_counts(x,fuzzy,
-                         right = closed_on,
+
+  counts <- cut_counts(x,fuzzy,
+                         right = right,
                          include.lowest = include_lowest)
-  } else {
-    counts <- cut_counts(x, fuzzy,
-                         right = closed_on == "right",
-                         include.lowest = include_lowest)
-    # Convert to density
-    density <- counts / (n * bin_width)
-  }
+  # Convert to density
+  density <- counts / (n * bin_width)
+
   mid_points <- 0.5 * (breaks[-1L] + breaks[-n_breaks])
 
   data_structure <- structure(list(
@@ -166,6 +154,11 @@ histogram.default <- function(x,
   )
 
   #---- --- ----- --- ---- --- ----#
+
+  # Get the default pars
+  op <- par(no.readonly = TRUE)
+
+
   # Add more margin space for labels
   if(labels){
     par(mar=c(9,5,5,3) + 0.1)
@@ -173,27 +166,56 @@ histogram.default <- function(x,
 
   # Define plot arguments before plotting
   xlim <- range(x)
-  y <- ifelse(freq,data_structure$counts,data_structure$density)
+   y <- if(freq) counts else density
   ylim <- (range(y))
-  n_breaks <- data_structure$breaks
-
-
 
   plot.new()
   plot.window(xlim = xlim,ylim = ylim)
 
+  rect(breaks[-n_breaks], 0,
+       breaks[-1L],y,
+       col = line_color,
+       border = line_color,
+       lwd = line_width,
+       lty = line_type)
+
+  if (labels) {
+    label_names <- label_names %||% ifelse(freq,"Frequency","Density")
+
+    axis(1,
+         at = pretty(range(x, na.rm = na_rm)),
+         cex.axis = label_size,
+         family = "serif",
+         las = 1,
+         lwd = 0,
+         tcl = 0)
 
 
+    axis(2,
+         at = pretty(range(y, na.rm = na_rm)),
+         cex.axis = label_size,
+         family = "serif",
+         lwd = 0,
+         tcl = -0.03,
+         las = 1)
+  }
 
+  if (!is.null(main)) {
+    title(main = main,
+          line = in_line,
+          family = "serif",...)  # Add title with adjustable line spacing
 
+    # Add axis labels
+    if (!is.null(xlab) || !is.null(ylab)) {
+      title(xlab = xlab, line = 2.5,family = "serif",...)
+      title(ylab = ylab, line = 3.5,family = "serif",...)
+    }
+  }
 
+# Restore graphical parameters
+par(op)
 
-
-
-
-
-
-
+invisible(data_structure)
 
 }
 
@@ -201,7 +223,7 @@ histogram.formula <- function(formula,
                               data = NULL,
                               breaks = "Sturges", # used to compute number of bins
                               freq = TRUE, # if FALSE, histogram will display density on y-axis
-                              closed_on = "right",
+                              right = TRUE,
                               include_edges = TRUE, # include lowest and highest edge in first & last intervals
                               labels = TRUE,
                               label_names = NULL,
@@ -221,7 +243,7 @@ histogram.formula <- function(formula,
 # Sturges number-of-bins rule
 sturges_breaks <- function(x){
   n <- length(x)
-  breaks <- 1 + log2(n)
+  breaks <- ceiling(1 + log2(n))
   return(breaks)
 }
 
@@ -235,6 +257,7 @@ doane_breaks<- function(x){
 
   sigma <- sqrt(6 * (n - 2) / ((n + 1) * (n + 3)))
   breaks <- 1 + log2(n) + log2(1 + (abs(g1)/sigma))
+  breaks <- ceiling(breaks)
   return(breaks)
 }
 
@@ -306,13 +329,25 @@ ts_breaks <- function(x, use_iqr = FALSE) {
 # Count observations in each bin
 cut_counts <- function(x,
                        breaks,
-                       right = right,
-                       include.lowest = include_lowest) {
+                       right = TRUE,
+                       include.lowest = TRUE) {
 
-  bin_indices <- findInterval(x, breaks,
-                              rightmost.closed = right,
-                              all.inside = include.lowest)
+  # Ensure 'breaks' is strictly increasing
+  if (any(diff(breaks) <= 0)) {
+    stop("The 'breaks' vector must be strictly increasing.")
+  }
 
-  # Count occurrences in each bin
-  tabulate(bin_indices, nbins = length(breaks) - 1)
+  # Use `cut` to assign bins
+  bins <- cut(x,
+              breaks = breaks,
+              right = right,
+              include.lowest = include.lowest,
+              labels = FALSE)
+
+  if(length(breaks) == 1L){
+    # Count occurrences in each bin using scalar
+    tabulate(bins, nbins = as.integer(breaks) - 1)
+  } else{
+    tabulate(bins, nbins = length(breaks) - 1)
+  }
 }

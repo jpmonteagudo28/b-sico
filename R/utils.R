@@ -180,3 +180,12 @@ keep_finite <- function(x){
   x <- x[is.finite(x)]
   return(x)
 }
+#---- --- ---- --- ---- --- ---- --- ---- --- ---- --- ----#
+is_empty_object <- function(x) {
+  if (length(x) == 0) TRUE
+  else FALSE
+}
+
+#---- --- ---- --- ---- --- ---- --- ---- --- ---- --- ----#
+is.formula <- function(x) inherits(x,"formula")
+
