@@ -42,6 +42,8 @@ histogram <- function(x,...)
 
 
 histogram.default <- function(x,
+                      shape = NULL,
+                      show_border = NULL,
                       na_rm = TRUE,
                       breaks = "scott", # used to compute number of bins
                       freq = TRUE, # if FALSE, histogram will display density on y-axis
@@ -55,7 +57,7 @@ histogram.default <- function(x,
                       in_line = 1,
                       xlab = NULL,
                       ylab = NULL,
-                      line_width = NULL,
+                      line_width = 0.5,
                       line_type = "solid",
                       line_color = "gray20",
                       ...
@@ -66,6 +68,15 @@ histogram.default <- function(x,
             is.logical(freq),
             is.logical(include_lowest),
             is.logical(labels))
+
+  shape <- match.arg(shape,c("segment","rect","lines"))
+  show_border <- match.arg(show_border,c("left","right"))
+
+  if(shape != "segment" && !is.null(show_border))
+    warning("Ignoring 'show_border' argument.Borders only applied to shape 'segment'")
+
+  if(shape == "segment" && is.null(show_border))
+    stop("Please, specify a border to be drawn for shape 'segment'")
 
   # Check for identical data points
   if(all_the_same(x)){
@@ -161,7 +172,7 @@ histogram.default <- function(x,
 
   # Add more margin space for labels
   if(labels){
-    par(mar=c(9,5,5,3) + 0.1)
+    par(mar=c(7,5,5,3) + 0.1)
   }
 
   # Define plot arguments before plotting
@@ -172,12 +183,56 @@ histogram.default <- function(x,
   plot.new()
   plot.window(xlim = xlim,ylim = ylim)
 
-  rect(breaks[-n_breaks], 0,
-       breaks[-1L],y,
-       col = line_color,
-       border = line_color,
-       lwd = line_width,
-       lty = line_type)
+  if(shape == "rect"){
+    rect(breaks[-n_breaks], 0,
+         breaks[-1L],y,
+         col = NA,
+         border = line_color,
+         lwd = line_width,
+         lty = line_type)
+  } else if(shape == "segment"){
+
+    # Draw the top lines of bins
+    segments(x0 = breaks[-n_breaks],  # Start of each bin
+             y0 = y,                  # Height of each bin (top edge)
+             x1 = breaks[-1L],        # End of each bin
+             y1 = y,                  # Same height for horizontal line
+             col = line_color,
+             lwd = line_width,
+             lty = line_type)
+
+    # Conditionally draw borders
+    if (show_border == "left") {
+      segments(x0 = breaks[-n_breaks],  # Left edge of bin
+               y0 = 0,                  # Start at baseline
+               x1 = breaks[-n_breaks],  # Same x-coordinate (vertical line)
+               y1 = y,                  # Height of the bin
+               col = line_color,
+               lwd = line_width,
+               lty = line_type)
+    }
+
+    if (show_border == "right") {
+      segments(x0 = breaks[-1L],       # Right edge of bin
+               y0 = 0,                 # Start at baseline
+               x1 = breaks[-1L],       # Same x-coordinate (vertical line)
+               y1 = y,                 # Height of the bin
+               col = line_color,
+               lwd = line_width,
+               lty = line_type)
+    }
+
+  } else {
+    # Draw histogram bin tops using segments
+        segments(x0 = breaks[-n_breaks],  # Start of each bin
+                   y0 = y,                # Height of each bin (top edge)
+                   x1 = breaks[-1L],      # End of each bin
+                   y1 = y,                # Same height to create a horizontal line
+                   col = line_color,
+                   lwd = line_width,
+                   lty = "solid")
+
+  }
 
   if (labels) {
     label_names <- label_names %||% ifelse(freq,"Frequency","Density")
@@ -185,30 +240,29 @@ histogram.default <- function(x,
     axis(1,
          at = pretty(range(x, na.rm = na_rm)),
          cex.axis = label_size,
-         family = "serif",
          las = 1,
          lwd = 0,
-         tcl = 0)
+         lwd.ticks = line_width,
+         tcl = -0.2)
 
 
     axis(2,
          at = pretty(range(y, na.rm = na_rm)),
          cex.axis = label_size,
-         family = "serif",
          lwd = 0,
-         tcl = -0.03,
+         lwd.ticks = line_width,
+         tcl = -0.2,
          las = 1)
   }
 
   if (!is.null(main)) {
     title(main = main,
-          line = in_line,
-          family = "serif",...)  # Add title with adjustable line spacing
+          line = in_line,...)  # Add title with adjustable line spacing
 
     # Add axis labels
     if (!is.null(xlab) || !is.null(ylab)) {
-      title(xlab = xlab, line = 2.5,family = "serif",...)
-      title(ylab = ylab, line = 3.5,family = "serif",...)
+      title(xlab = xlab, line = 2.5,...)
+      title(ylab = ylab, line = 3.5,...)
     }
   }
 
@@ -219,27 +273,36 @@ invisible(data_structure)
 
 }
 
+#---- --- ---- --- ---- --- ---- --- ---- --- ---- --- ----#
+# Supply a formula of the form ~x instead of data$column
+
 histogram.formula <- function(formula,
                               data = NULL,
-                              breaks = "Sturges", # used to compute number of bins
+                              shape = NULL,
+                              show_border = NULL,
+                              na_rm = TRUE,
+                              breaks = "scott", # used to compute number of bins
                               freq = TRUE, # if FALSE, histogram will display density on y-axis
-                              right = TRUE,
-                              include_edges = TRUE, # include lowest and highest edge in first & last intervals
+                              right= TRUE,
+                              fuzz = NULL,
+                              include_lowest = TRUE,
                               labels = TRUE,
                               label_names = NULL,
-                              label_size = 1.2,
+                              label_size = NULL,
                               main = NULL,
                               in_line = 1,
                               xlab = NULL,
                               ylab = NULL,
-                              n_ticks = 5,
-                              axis_type = NULL,
+                              line_width = 0.5,
                               line_type = "solid",
-                              line_color = "gray20"
+                              line_color = "gray20",
+                              ...
 ){
 
 }
 
+#---- --- ---- --- ---- --- ---- --- ---- --- ---- --- ----#
+# Functions for counts, bins and breaks
 # Sturges number-of-bins rule
 sturges_breaks <- function(x){
   n <- length(x)

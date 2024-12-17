@@ -13,14 +13,24 @@ knitr::opts_chunk$set(
 )
 ```
 
-# basico <img src="man/figures/logo.png" align="right" height="165" alt="" />
+# basico <img src="man/figures/logo.png" align="right" height="250" alt="" />
 
 <!-- badges: start -->
 [![stability-wip](https://img.shields.io/badge/stability-wip-lightgrey.svg)](https://github.com/mkenney/software-guides/blob/master/STABILITY-BADGES.md#work-in-progress)
 
 <!-- badges: end -->
 
-The goal of basico is to ...
+Feature          | Good Practice                                                     | Bad Practice
+-----------------|-------------------------------------------------------------------|------------------------------------------------------------------
+Words            | Words are spelled out.                                           | Mysterious abbreviations abound, requiring elaborate decoding.
+Text Direction   | Words run left to right; minimal vertical text.                  | Words run vertically or in several different directions.
+Messages         | Little messages help explain the data.                           | Graphic is cryptic, requiring repeated references to scattered text.
+Encoding         | Labels are placed directly on the graphic; no legend is needed.  | Elaborately encoded shadings and obscure codings require back-and-forth references.
+Graphic Appeal   | Attracts viewer, provokes curiosity.                              | Graphic is repellent and filled with chartjunk.
+Color Usage      | Colors chosen for color-deficient viewers; avoid red/green.      | Red and green used for essential contrasts, limiting accessibility.
+Typography       | Clear, precise, modest type; upper-and-lowercase with serifs.    | Clotted, overbearing type; all capitals and sans-serif.
+Lettering        | Lettering may be done by hand.                                   | None explicitly specified for bad practices.
+
 
 ## Installation
 
@@ -36,17 +46,22 @@ pak::pak("jpmonteagudo28/basico")
 This is a basic example which shows you how to solve a common problem:
 
 ```{r example}
-# library(basico)
-## basic example code
+ library(basico)
+box_plot(Diet~weight, .data = ChickWeight,
+ horizontal = FALSE, median_symbol = "×",
+ add_mean = TRUE, n_ticks = 7,
+ ylab = "Diet",
+ xlab = "Weight(g)")
 ```
 
 What is special about using `README.Rmd` instead of just `README.md`? You can include R chunks like so:
 
-```{r cars}
-summary(cars)
+```{r example2}
+x <- mtcars$mpg
+set_font("EB Garamond")
+histogram(x,breaks = "scott",shape = "segment",show_border = "left",
+          label_size = 1.2, main = "Example of a histogram",xlab = "Values",
+          ylab = "Frequency")
+mtext(paste0("Mean: ", round(mean(x), 2)), side = 3, line = 0.5, cex = 0.8, adj = 1, col = "red4")
 ```
 
-You'll still need to render `README.Rmd` regularly, to keep `README.md` up-to-date. `devtools::build_readme()` is handy for this.
-
-
-In that case, don't forget to commit and push the resulting figure files, so they display on GitHub and CRAN.

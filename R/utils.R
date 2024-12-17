@@ -182,8 +182,7 @@ keep_finite <- function(x){
 }
 #---- --- ---- --- ---- --- ---- --- ---- --- ---- --- ----#
 is_empty_object <- function(x) {
-  if (length(x) == 0) TRUE
-  else FALSE
+ (length(x) == 0)
 }
 
 #---- --- ---- --- ---- --- ---- --- ---- --- ---- --- ----#

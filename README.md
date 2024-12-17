@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# basico <img src="man/figures/logo.png" align="right" height="165" alt="" />
+# basico <img src="man/figures/logo.png" align="right" height="250" alt="" />
 
 <!-- badges: start -->
 
@@ -9,7 +9,16 @@
 
 <!-- badges: end -->
 
-The goal of basico is to …
+| Feature        | Good Practice                                                   | Bad Practice                                                                        |
+|----------------|-----------------------------------------------------------------|-------------------------------------------------------------------------------------|
+| Words          | Words are spelled out.                                          | Mysterious abbreviations abound, requiring elaborate decoding.                      |
+| Text Direction | Words run left to right; minimal vertical text.                 | Words run vertically or in several different directions.                            |
+| Messages       | Little messages help explain the data.                          | Graphic is cryptic, requiring repeated references to scattered text.                |
+| Encoding       | Labels are placed directly on the graphic; no legend is needed. | Elaborately encoded shadings and obscure codings require back-and-forth references. |
+| Graphic Appeal | Attracts viewer, provokes curiosity.                            | Graphic is repellent and filled with chartjunk.                                     |
+| Color Usage    | Colors chosen for color-deficient viewers; avoid red/green.     | Red and green used for essential contrasts, limiting accessibility.                 |
+| Typography     | Clear, precise, modest type; upper-and-lowercase with serifs.   | Clotted, overbearing type; all capitals and sans-serif.                             |
+| Lettering      | Lettering may be done by hand.                                  | None explicitly specified for bad practices.                                        |
 
 ## Installation
 
