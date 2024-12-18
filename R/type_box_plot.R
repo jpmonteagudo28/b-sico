@@ -78,11 +78,11 @@ box_plot <- function(formula,
     is.numeric(outlier_size)
   )
 
-  # Extract the dependent variable (LHS of the formula)
-  group_var <- as.character(formula[[2]])
-
   if (!is.formula(formula))
     stop("Please, provide a valid formula object of the form 'y~x'")
+
+  # Extract the dependent variable (LHS of the formula)
+  group_var <- as.character(formula[[2]])
 
   rhs_vars <- all.vars(formula[[3]])
   n_vars <- length(all.vars(formula))

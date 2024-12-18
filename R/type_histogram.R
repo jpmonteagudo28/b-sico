@@ -66,6 +66,7 @@ histogram.default <- function(x,
   stopifnot(is.numeric(x),
             is.logical(na_rm),
             is.logical(freq),
+            is.logical(right),
             is.logical(include_lowest),
             is.logical(labels))
 
@@ -299,6 +300,217 @@ histogram.formula <- function(formula,
                               ...
 ){
 
+  stopifnot(is.data.frame(data),
+            is.logical(na_rm),
+            is.logical(freq),
+            is.logical(include_lowest),
+            is.logical(labels))
+
+  shape <- match.arg(shape,c("segment","rect","lines"))
+  show_border <- match.arg(show_border,c("left","right"))
+
+  if(shape != "segment" && !is.null(show_border))
+    warning("Ignoring 'show_border' argument.Borders only applied to shape 'segment'")
+
+  if(shape == "segment" && is.null(show_border))
+    stop("Please, specify a border to be drawn for shape 'segment'")
+
+  if(shape == "line" && line_type != "solid"){
+    warning("'line_type' will be ignored. Default setting is 'solid' and cannot be changed for this shape.")
+  }
+
+  #---- --- ---- --- ---- --- ---- --- ---- --- ---- --- ----#
+  # Handle formula
+  vars <- handle_formula(formula,data)
+  x <- vars$x
+
+  # Remove NA
+  if(na_rm){
+    x <- rid_na(x)
+  }
+
+  if(is_empty_object(x))
+    stop("Data only contained NA values. Provide a valid numeric object or dataset ")
+
+  # Remove Inf,-Inf
+  x <- keep_finite(x)
+
+
+  n <- length(x)
+
+  use_breaks <- !missing(breaks)
+
+  if(!use_breaks){
+    warning("Using Scott's normal reference rule to compute breaks")
+    breaks <- scott_breaks(x)
+    breaks <- pretty(range(x),n = breaks)
+  }
+
+  if (is.character(breaks)) {
+    breaks <- match.arg(breaks, c("sturges", "doane", "scott", "fd", "ts"))
+    breaks <- switch(breaks,
+                     sturges = sturges_breaks(x),
+                     doane = doane_breaks(x),
+                     scott = scott_breaks(x),
+                     fd = fd_breaks(x),
+                     ts = ts_breaks(x))
+    breaks <- pretty(range(x), n = breaks)
+  } else if (is.numeric(breaks) && length(breaks) == 1L) {
+    breaks <- pretty(range(x), n = breaks, min.n = 1)
+  } else if (is.numeric(breaks) && length(breaks) > 1L) {
+    breaks <- sort(breaks)
+  } else if (is.function(breaks)) {
+    breaks <- breaks(x)
+  } else {
+    stop("Invalid breaks specification")
+  }
+
+  n_breaks <- length(breaks)
+  bin_width <- diff(breaks) # Preferred over diff(range(x))/breaks, which gives only an average
+  bin_width_range <- diff(range(bin_width)) # constant difference - linear seq.
+  # Check if bin widths are equidistant if not specified by the user and constant difference of 0
+  equidistant <- !use_breaks || all_the_same(bin_width_range, tol = 1e-8* mean(bin_width))
+
+  # Check if bin-widths are set to zero or a negative number
+  if(!use_breaks && any_zero_negative(bin_width)){
+    stop("'breaks' are not strictly increasing")
+  }
+
+  # Adapted ggplot2::bin - this protects from floating point rounding errors
+  fuzz <- fuzz %||% 1e-08 * stats::median(diff(breaks))
+  if (!is.finite(fuzz)) { # happens when 0 or 1 finite breaks are given
+    fuzz <- .Machine$double.eps * 1e3
+  }
+  if (right) {
+    fuzzes <- c(-fuzz, rep.int(fuzz, n_breaks - 1))
+  } else {
+    fuzzes <- c(rep.int(-fuzz, n_breaks - 1), fuzz)
+  }
+  fuzzy <- breaks + fuzzes
+
+
+  counts <- cut_counts(x,fuzzy,
+                       right = right,
+                       include.lowest = include_lowest)
+  # Convert to density
+  density <- counts / (n * bin_width)
+
+  mid_points <- 0.5 * (breaks[-1L] + breaks[-n_breaks])
+
+  data_structure <- structure(list(
+    breaks = breaks,
+    counts = counts,
+    density = density,
+    mid_points = mid_points),
+    class = "histogram"
+  )
+
+  #---- --- ----- --- ---- --- ----#
+
+  # Get the default pars
+  op <- par(no.readonly = TRUE)
+
+
+  # Add more margin space for labels
+  if(labels){
+    par(mar=c(7,5,5,3) + 0.1)
+  }
+
+  # Define plot arguments before plotting
+  xlim <- range(x)
+  y <- if(freq) counts else density
+  ylim <- (range(y))
+
+  plot.new()
+  plot.window(xlim = xlim,ylim = ylim)
+
+  if(shape == "rect"){
+    rect(breaks[-n_breaks], 0,
+         breaks[-1L],y,
+         col = NA,
+         border = line_color,
+         lwd = line_width,
+         lty = line_type)
+  } else if(shape == "segment"){
+
+    # Draw the top lines of bins
+    segments(x0 = breaks[-n_breaks],  # Start of each bin
+             y0 = y,                  # Height of each bin (top edge)
+             x1 = breaks[-1L],        # End of each bin
+             y1 = y,                  # Same height for horizontal line
+             col = line_color,
+             lwd = line_width,
+             lty = line_type)
+
+    # Conditionally draw borders
+    if (show_border == "left") {
+      segments(x0 = breaks[-n_breaks],  # Left edge of bin
+               y0 = 0,                  # Start at baseline
+               x1 = breaks[-n_breaks],  # Same x-coordinate (vertical line)
+               y1 = y,                  # Height of the bin
+               col = line_color,
+               lwd = line_width,
+               lty = line_type)
+    }
+
+    if (show_border == "right") {
+      segments(x0 = breaks[-1L],       # Right edge of bin
+               y0 = 0,                 # Start at baseline
+               x1 = breaks[-1L],       # Same x-coordinate (vertical line)
+               y1 = y,                 # Height of the bin
+               col = line_color,
+               lwd = line_width,
+               lty = line_type)
+    }
+
+  } else {
+    # Draw histogram bin tops using segments
+    segments(x0 = breaks[-n_breaks],  # Start of each bin
+             y0 = y,                # Height of each bin (top edge)
+             x1 = breaks[-1L],      # End of each bin
+             y1 = y,                # Same height to create a horizontal line
+             col = line_color,
+             lwd = line_width,
+             lty = "solid")
+
+  }
+
+  if (labels) {
+    label_names <- label_names %||% ifelse(freq,"Frequency","Density")
+
+    axis(1,
+         at = pretty(range(x, na.rm = na_rm)),
+         cex.axis = label_size,
+         las = 1,
+         lwd = 0,
+         lwd.ticks = line_width,
+         tcl = -0.2)
+
+
+    axis(2,
+         at = pretty(range(y, na.rm = na_rm)),
+         cex.axis = label_size,
+         lwd = 0,
+         lwd.ticks = line_width,
+         tcl = -0.2,
+         las = 1)
+  }
+
+  if (!is.null(main)) {
+    title(main = main,
+          line = in_line,...)  # Add title with adjustable line spacing
+
+    # Add axis labels
+    if (!is.null(xlab) || !is.null(ylab)) {
+      title(xlab = xlab, line = 2.5,...)
+      title(ylab = ylab, line = 3.5,...)
+    }
+  }
+
+  # Restore graphical parameters
+  par(op)
+
+  invisible(data_structure)
 }
 
 #---- --- ---- --- ---- --- ---- --- ---- --- ---- --- ----#
