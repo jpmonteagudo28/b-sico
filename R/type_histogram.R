@@ -1,8 +1,64 @@
-#' Edward Tufte style histogram
+#' Edward Tufte Style Histogram
 #'
 #' @description
-#' Visualize the distribution of a single **continuous** variable
+#' Visualize the distribution of a single **continuous** variable using Edward Tufte's minimalist principles for data visualization.
 #'
+#' The function includes various methods for calculating histogram breaks, including:
+#' - **Sturges**: Sturges' formula based on a normal distribution approximation.
+#' - **Scott**: Scott's rule, which minimizes the integrated mean squared error for a normal density.
+#' - **FD**: The Freedman-Diaconis rule, which uses the interquartile range for robust bin width calculation.
+#' - **Doane**: A modified Sturges' formula to account for skewness in the data.
+#' - **Terrell-Scott**: Terrell-Scott's non-normal reference rule for optimal binning, based on IQR.
+#'
+#' @param x A numeric vector representing the data to be visualized.
+#' @param shape The shape of the histogram: "segment", "rect", or "lines".
+#' @param show_border A character string specifying which borders to display for shape = "segment" ("left" or "right").
+#' @param na_rm Logical, whether to remove `NA` values from the data. Default is `TRUE`.
+#' @param breaks Method to compute the histogram bins. Options are:
+#'   - `"sturges"`: Sturges' rule.
+#'   - `"scott"`: Scott's normal reference rule.
+#'   - `"fd"`: Freedman-Diaconis rule.
+#'   - `"doane"`: Doane's formula.
+#'   - `"ts"`: Terrell-Scott rule.
+#'   - A numeric value for fixed bin width or a custom function.
+#' @param freq Logical, whether to display frequency (`TRUE`) or density (`FALSE`) on the y-axis. Default is `TRUE`.
+#' @param right Logical, whether bins should be right-closed. Default is `TRUE`.
+#' @param fuzz Numeric, a small value added to bin boundaries to prevent rounding issues.
+#' @param include_lowest Logical, whether the lowest bin should include the smallest value. Default is `TRUE`.
+#' @param axes Logical, whether to display x and y axes. Default is `FALSE`.
+#' @param labels Logical, whether to display axis labels. Default is `TRUE`.
+#' @param label_names Optional, custom names for x and y axis labels. Default is `NULL`.
+#' @param label_size Numeric, size of axis labels. Default is `NULL`.
+#' @param main Optional, a title for the histogram. Default is `NULL`.
+#' @param in_line Numeric, line spacing for the title. Default is `1`.
+#' @param xlab Custom x-axis label. Default is `NULL`.
+#' @param ylab Custom y-axis label. Default is `NULL`.
+#' @param line_width Numeric, line width for the histogram. Default is `0.5`.
+#' @param line_type Line type for the histogram ("solid", "dashed", etc.). Default is `"solid"`.
+#' @param line_color Color of the histogram lines. Default is `"gray20"`.
+#' @param ... Additional arguments passed to the function.
+#'
+#' @return A histogram plot with the desired styling and a list structure containing:
+#' - `breaks`: The computed breaks for the histogram bins.
+#' - `counts`: The frequency of observations in each bin.
+#' - `density`: The density of observations in each bin.
+#' - `mid_points`: The midpoints of each bin.
+#'
+#' @details
+#' The choice of breaks method significantly influences the histogram's appearance. The function provides robust defaults while allowing customization to suit specific data distributions.
+#'
+#' @examples
+#' set.seed(123)
+#' x <- rnorm(100)
+#' histogram(x, shape = "rect", breaks = "fd", axes = TRUE, labels = TRUE)
+#'
+#' # Using formula argument
+#' df <- data.frame(x = rexp(1000,2.5))
+#' histogram(~x,df,shape = "line", breaks = 12)
+#'
+#' @seealso [hist()], [cut()],[geom_histogram()]
+#' @export
+
 
 # Notes from https://web.archive.org/web/20150501071703/http://www.stat.rice.edu/~scottdw/stat550/HW/hw3/c03.pdf
 # https://en.wikipedia.org/wiki/Histogram
@@ -50,6 +106,7 @@ histogram.default <- function(x,
                       right= TRUE,
                       fuzz = NULL,
                       include_lowest = TRUE,
+                      axes = FALSE,
                       labels = TRUE,
                       label_names = NULL,
                       label_size = NULL,
@@ -68,6 +125,7 @@ histogram.default <- function(x,
             is.logical(freq),
             is.logical(right),
             is.logical(include_lowest),
+            is.logical(axes),
             is.logical(labels))
 
   shape <- match.arg(shape,c("segment","rect","lines"))
@@ -238,22 +296,25 @@ histogram.default <- function(x,
   if (labels) {
     label_names <- label_names %||% ifelse(freq,"Frequency","Density")
 
-    axis(1,
-         at = pretty(range(x, na.rm = na_rm)),
-         cex.axis = label_size,
-         las = 1,
-         lwd = 0,
-         lwd.ticks = line_width,
-         tcl = -0.2)
+    if(axes){
+      axis(1,
+           at = pretty(range(x, na.rm = na_rm)),
+           cex.axis = label_size,
+           las = 1,
+           lwd = 0,
+           lwd.ticks = line_width,
+           tcl = -0.2)
 
 
-    axis(2,
-         at = pretty(range(y, na.rm = na_rm)),
-         cex.axis = label_size,
-         lwd = 0,
-         lwd.ticks = line_width,
-         tcl = -0.2,
-         las = 1)
+      axis(2,
+           at = pretty(range(y, na.rm = na_rm)),
+           cex.axis = label_size,
+           lwd = 0,
+           lwd.ticks = line_width,
+           tcl = -0.2,
+           las = 1)
+    }
+
   }
 
   if (!is.null(main)) {
@@ -287,7 +348,8 @@ histogram.formula <- function(formula,
                               right= TRUE,
                               fuzz = NULL,
                               include_lowest = TRUE,
-                              labels = TRUE,
+                              axes = FALSE,
+                              labels = FALSE,
                               label_names = NULL,
                               label_size = NULL,
                               main = NULL,
@@ -304,6 +366,7 @@ histogram.formula <- function(formula,
             is.logical(na_rm),
             is.logical(freq),
             is.logical(include_lowest),
+            is.logical(axes),
             is.logical(labels))
 
   shape <- match.arg(shape,c("segment","rect","lines"))
@@ -322,7 +385,7 @@ histogram.formula <- function(formula,
   #---- --- ---- --- ---- --- ---- --- ---- --- ---- --- ----#
   # Handle formula
   vars <- handle_formula(formula,data)
-  x <- vars$x
+  x <- vars$x %||% vars$y
 
   # Remove NA
   if(na_rm){
@@ -478,22 +541,25 @@ histogram.formula <- function(formula,
   if (labels) {
     label_names <- label_names %||% ifelse(freq,"Frequency","Density")
 
-    axis(1,
-         at = pretty(range(x, na.rm = na_rm)),
-         cex.axis = label_size,
-         las = 1,
-         lwd = 0,
-         lwd.ticks = line_width,
-         tcl = -0.2)
+    if(axes){
+      axis(1,
+           at = pretty(range(x, na.rm = na_rm)),
+           cex.axis = label_size,
+           las = 1,
+           lwd = 0,
+           lwd.ticks = line_width,
+           tcl = -0.2)
 
 
-    axis(2,
-         at = pretty(range(y, na.rm = na_rm)),
-         cex.axis = label_size,
-         lwd = 0,
-         lwd.ticks = line_width,
-         tcl = -0.2,
-         las = 1)
+      axis(2,
+           at = pretty(range(y, na.rm = na_rm)),
+           cex.axis = label_size,
+           lwd = 0,
+           lwd.ticks = line_width,
+           tcl = -0.2,
+           las = 1)
+    }
+
   }
 
   if (!is.null(main)) {
@@ -514,14 +580,39 @@ histogram.formula <- function(formula,
 }
 
 #---- --- ---- --- ---- --- ---- --- ---- --- ---- --- ----#
-# Functions for counts, bins and breaks
-# Sturges number-of-bins rule
+#' Sturges Number-of-Bins Rule
+#'
+#' @description
+#' Computes the number of histogram bins using Sturges' formula, which is based on a normal distribution approximation.
+#'
+#' @param x A numeric vector representing the data to be binned.
+#'
+#' @return An integer representing the number of bins.
+#'
+#' @examples
+#' x <- rnorm(100)
+#' sturges_breaks(x)
+#'
+#' @export
 sturges_breaks <- function(x){
   n <- length(x)
   breaks <- ceiling(1 + log2(n))
   return(breaks)
 }
-
+#' Doane's Formula for Number of Bins
+#'
+#' @description
+#' Computes the number of histogram bins using Doane's formula, which adjusts Sturges' rule to account for skewness in the data.
+#'
+#' @param x A numeric vector representing the data to be binned.
+#'
+#' @return An integer representing the number of bins.
+#'
+#' @examples
+#' x <- rnorm(100)
+#' doane_breaks(x)
+#'
+#' @export
 # Doane's formula
 doane_breaks<- function(x){
   x_bar <- mean(x)
@@ -535,7 +626,20 @@ doane_breaks<- function(x){
   breaks <- ceiling(breaks)
   return(breaks)
 }
-
+#' Scott's Normal Reference Rule for Number of Bins
+#'
+#' @description
+#' Computes the number of histogram bins using Scott's normal reference rule, which minimizes the integrated mean squared error for a normal density.
+#'
+#' @param x A numeric vector representing the data to be binned.
+#'
+#' @return An integer representing the number of bins.
+#'
+#' @examples
+#' x <- rnorm(100)
+#' scott_breaks(x)
+#'
+#' @export
 # Scott's normal reference rule
 scott_breaks <- function(x){
   sigma <- sd(x)
@@ -548,7 +652,21 @@ scott_breaks <- function(x){
   return(breaks)
 }
 
-# Friedman-Diaconis normal reference rule
+#' Freedman-Diaconis Rule for Number of Bins
+#'
+#' @description
+#' Computes the number of histogram bins using the Freedman-Diaconis rule, which is robust to outliers and uses the interquartile range (IQR) for bin width.
+#'
+#' @param x A numeric vector representing the data to be binned.
+#'
+#' @return An integer representing the number of bins.
+#' @details If the interquartile range (IQR) is zero, the function falls back to Scott's rule.
+#'
+#' @examples
+#' x <- rnorm(100)
+#' fd_breaks(x)
+#'
+#' @export
 fd_breaks <- function(x){
   iqr <- IQR(x)
   n <- length(x)
@@ -582,7 +700,21 @@ fd_breaks <- function(x){
   return(breaks)
 }
 
-# Terrell-Scott oversmoothed histogram formula
+#' Terrell-Scott Oversmoothed Histogram Formula
+#'
+#' @description
+#' Computes the number of histogram bins using Terrell-Scott's oversmoothing method, which provides a larger bin width to reveal more structure in the data.
+#'
+#' @param x A numeric vector representing the data to be binned.
+#' @param use_iqr Logical, whether to use the interquartile range (IQR) for a robust version of the formula. Default is `FALSE`.
+#'
+#' @return An integer representing the number of bins.
+#'
+#' @examples
+#' x <- rnorm(100)
+#' ts_breaks(x, use_iqr = TRUE)
+#'
+#' @export
 ts_breaks <- function(x, use_iqr = FALSE) {
   n <- length(x)
   if (use_iqr) {
@@ -601,7 +733,25 @@ ts_breaks <- function(x, use_iqr = FALSE) {
   return(breaks)
 }
 
-# Count observations in each bin
+#' Count Observations in Each Bin
+#'
+#' @description
+#' Counts the number of observations within each bin of a histogram, given a vector of bin edges (`breaks`).
+#'
+#' @param x A numeric vector representing the data to be binned.
+#' @param breaks A numeric vector of bin edges, or a scalar for the number of bins.
+#' @param right Logical, whether bins should be right-closed. Default is `TRUE`.
+#' @param include.lowest Logical, whether the lowest bin should include the smallest value. Default is `TRUE`.
+#'
+#' @return An integer vector containing the count of observations in each bin.
+#' @details The function ensures that the `breaks` vector is strictly increasing. It uses the `cut()` function to assign bins to observations.
+#'
+#' @examples
+#' x <- rnorm(100)
+#' breaks <- seq(-3, 3, by = 1)
+#' cut_counts(x, breaks)
+#'
+#' @export
 cut_counts <- function(x,
                        breaks,
                        right = TRUE,

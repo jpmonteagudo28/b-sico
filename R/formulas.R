@@ -84,3 +84,5 @@ basic_frame = function(formula, data, drop = FALSE) {
   names = sapply(attr(terms(formula), "variables")[-1L], deparse, width.cutoff = 500L)
   data[, names, drop = drop]
 }
+
+

@@ -16,7 +16,8 @@ If no family name provided, R will use the Google font name as default.}
 temporarily invisible copy of Google font name
 }
 \description{
-Set Google font as default font for all graphing devices
+Set Google font as default font for all graphing devices prior to starting new plot. If font set
+after graphing device initialized, R will use default font family parameters.
 }
 \examples{
 set_font("Montserrat","monse")
