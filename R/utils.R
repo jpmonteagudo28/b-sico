@@ -211,7 +211,7 @@ formula_length <- function(x) {
 }
 
 #---- --- ---- --- ---- --- ---- --- ---- --- ---- --- ----#
-check_factors <- function(df,
+are_factors <- function(df,
                           verbose = FALSE) {
 
   stopifnot(is.data.frame(df))
@@ -280,3 +280,5 @@ handle_formula <- function(formula, data) {
     return(list(x = x, y = y))  # Return a list of valid variables
   }
 }
+
+#---- --- ---- --- ---- --- ---- --- ---- --- ---- --- ----#

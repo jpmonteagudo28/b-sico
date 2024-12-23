@@ -106,6 +106,8 @@ histogram.default <- function(x,
                       right= TRUE,
                       fuzz = NULL,
                       include_lowest = TRUE,
+                      xlim = NULL,
+                      ylim = NULL,
                       axes = FALSE,
                       labels = TRUE,
                       label_names = NULL,
@@ -235,9 +237,10 @@ histogram.default <- function(x,
   }
 
   # Define plot arguments before plotting
-  xlim <- range(x)
-   y <- if(freq) counts else density
-  ylim <- (range(y))
+  y <- if(freq) counts else density
+  xlim <- if (is.null(xlim)) range(x) else xlim
+  ylim <- if (is.null(ylim)) range(y) else ylim
+
 
   plot.new()
   plot.window(xlim = xlim,ylim = ylim)
@@ -348,6 +351,8 @@ histogram.formula <- function(formula,
                               right= TRUE,
                               fuzz = NULL,
                               include_lowest = TRUE,
+                              xlim = NULL,
+                              ylim = NULL,
                               axes = FALSE,
                               labels = FALSE,
                               label_names = NULL,
@@ -480,9 +485,9 @@ histogram.formula <- function(formula,
   }
 
   # Define plot arguments before plotting
-  xlim <- range(x)
   y <- if(freq) counts else density
-  ylim <- (range(y))
+  xlim <- if (is.null(xlim)) range(x) else xlim
+  ylim <- if (is.null(ylim)) range(y) else ylim
 
   plot.new()
   plot.window(xlim = xlim,ylim = ylim)
