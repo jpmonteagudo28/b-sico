@@ -441,11 +441,9 @@ range_frame_axis <- function(.x,
     # Draw the Q1 and Q3 shifted segments only if draw_lines is TRUE
     if (draw_lines) {
       if (!x_axis) {
-        lines(rep(base, 2), c(x_min, q1_shifted), xpd = TRUE)
-        lines(rep(base, 2), c(q3_shifted, x_max), xpd = TRUE)
+        lines(rep(base, 2), c(x_min, x_max), xpd = TRUE)
       } else {
-        lines(c(x_min, q1_shifted), rep(base, 2), xpd = TRUE)
-        lines(c(q3_shifted, x_max), rep(base, 2), xpd = TRUE)
+        lines(c(x_min, x_max), rep(base, 2), xpd = TRUE)
       }
     }
   }

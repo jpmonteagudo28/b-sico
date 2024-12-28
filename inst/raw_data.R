@@ -1,7 +1,8 @@
 #---- --- ---- --- ---- ---  ---- --- ----#
-# Cancer Survival rates (2000 - 2020)
 library(dplyr)
-
+library(rvest)
+library(stringr)
+# Cancer Survival rates (2000 - 2020)
 # Set seed for reproducibility
 set.seed(123)
 
@@ -36,3 +37,37 @@ saveRDS(cancer_survival, "data/cancer_survival.rds")
 # Confirm the data is saved
 print("Data frame saved as 'cancer_survival.rds'.")
 #---- --- ---- --- ---- ---  ---- --- ----#
+# TOTAL GOVERNMENT EXPENDITURES AS PERCENTAGES OF GDP: 1947-1995
+
+url <- "https://www.govinfo.gov/content/pkg/BUDGET-1997-TAB/html/BUDGET-1997-TAB-17-3.htm"
+gov_spending <- read_html(url) |>
+  html_elements("pre") |>
+  html_text2()
+
+# Split text into lines and clean
+lines <- str_split(gov_spending, "\n")[[1]]
+lines <- str_trim(lines)  # Remove extra spaces
+
+# Extract rows of interest (skip headers and footnotes)
+data_lines <- lines[grepl("^\\d{4}|^TQ", lines)]  # Filter years (e.g., "1947", "TQ")
+
+# Parse into a data frame
+gov_df <- data_lines %>%
+  str_remove_all("\\.{2,}") %>%  # Remove extra dots
+  str_squish() %>%              # Remove extra spaces
+  str_split_fixed("\\s{2,}", n = 7) %>%  # Split columns by multiple spaces
+  as.data.frame()
+
+# Add column names
+colnames(gov_df) <- c(
+  "Fiscal_Year",
+  "Total_Government_Expenditures",
+  "Federal_Total",
+  "On_Budget",
+  "Off_Budget",
+  "Federal_Grants",
+  "State_Local_Expenditures"
+)
+
+gov_df <- gov_df %>%
+  mutate(across(-Fiscal_Year, ~ str_remove_all(., "[()]") %>% as.numeric()))
