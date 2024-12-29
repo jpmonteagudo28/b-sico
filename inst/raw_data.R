@@ -38,6 +38,7 @@ saveRDS(cancer_survival, "data/cancer_survival.rds")
 print("Data frame saved as 'cancer_survival.rds'.")
 #---- --- ---- --- ---- ---  ---- --- ----#
 # TOTAL GOVERNMENT EXPENDITURES AS PERCENTAGES OF GDP: 1947-1995
+# Total (Federal and State and Local) Government Finances
 
 url <- "https://www.govinfo.gov/content/pkg/BUDGET-1997-TAB/html/BUDGET-1997-TAB-17-3.htm"
 gov_spending <- read_html(url) |>
@@ -48,17 +49,16 @@ gov_spending <- read_html(url) |>
 lines <- str_split(gov_spending, "\n")[[1]]
 lines <- str_trim(lines)  # Remove extra spaces
 
-# Extract rows of interest (skip headers and footnotes)
-data_lines <- lines[grepl("^\\d{4}|^TQ", lines)]  # Filter years (e.g., "1947", "TQ")
+# Filter rows of interest (e.g., years and data rows)
+data_lines <- lines[grepl("^\\d{4}|^TQ", lines)]  # Rows starting with a year or "TQ"
 
-# Parse into a data frame
+# Split rows into columns based on multiple spaces
 gov_df <- data_lines %>%
-  str_remove_all("\\.{2,}") %>%  # Remove extra dots
-  str_squish() %>%              # Remove extra spaces
-  str_split_fixed("\\s{2,}", n = 7) %>%  # Split columns by multiple spaces
-  as.data.frame()
+  str_squish() %>%              # Remove unnecessary spaces
+  str_split("\\s+", simplify = TRUE) %>%  # Split by one or more spaces
+  as.data.frame(stringsAsFactors = FALSE)
 
-# Add column names
+# Add meaningful column names
 colnames(gov_df) <- c(
   "Fiscal_Year",
   "Total_Government_Expenditures",
@@ -69,5 +69,15 @@ colnames(gov_df) <- c(
   "State_Local_Expenditures"
 )
 
+# Clean numeric columns (remove parentheses and convert to numeric)
 gov_df <- gov_df %>%
-  mutate(across(-Fiscal_Year, ~ str_remove_all(., "[()]") %>% as.numeric()))
+  mutate(across(-Fiscal_Year, ~ as.numeric(str_remove_all(., "[()]")))) |>
+  mutate(Fiscal_Year = c(seq(1947,1976),"TQ",seq(1977,1995)))
+
+saveRDS(gov_df, "data/govt_spending.rds")
+
+#---- --- ---- --- ---- ---  ---- --- ----#
+# Current receipts of government as a percentage of Gross Domestic Product, 1970 and 1979
+#Current receipts of fifteen national governments as a percentage of gross domestic product
+# A data frame containing fifteen country observations for two years.
+# Edward Tufte. \emph{Beautiful Evidence}. Graphics Press, 174-176.
