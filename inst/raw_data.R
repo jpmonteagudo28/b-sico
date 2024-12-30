@@ -81,3 +81,16 @@ saveRDS(gov_df, "data/govt_spending.rds")
 #Current receipts of fifteen national governments as a percentage of gross domestic product
 # A data frame containing fifteen country observations for two years.
 # Edward Tufte. \emph{Beautiful Evidence}. Graphics Press, 174-176.
+#
+gdp <- data.frame(
+Country = c("Sweden", "Netherlands", "Norway", "Britain", "France",
+            "Germany", "Belgium", "Canada", "Finland", "Italy",
+            "US", "Greece", "Switzerland", "Spain", "Japan"),
+Year1970 = c(46.9, 44.0, 43.5, 40.7, 39.0, 37.5, 35.2, 35.2, 34.9, 30.4,
+             30.3, 26.8, 26.5, 22.5, 20.7),
+Year1979 = c(57.4, 55.8, 52.2, 39.0, 43.4, 42.9, 43.2, 35.8, 38.2, 35.7,
+             32.5, 30.6, 33.2, 27.1, 26.6)
+)
+
+# Save the data frame as an RDS file
+saveRDS(gdp, file = "data/gdp_data.rds")
