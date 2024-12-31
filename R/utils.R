@@ -1,116 +1,6 @@
 # Simple negation function to find excluded elements in a set
 `%!in%` <- Negate(`%in%`)
 
-# Calculate gaps based on scale type
-ticks_gap <- function(ticks, gap, is_log,
-                      digits = NULL) {
-
-  if (is_log) {
-
-    # For log scale, work with log-transformed differences
-    diffs <- diff(log10(ticks))
-    min_diff <- min(diffs)
-    adj_gap <- min(gap, min_diff)
-
-  } else {
-
-    # For linear scale, work with raw differences
-    diffs <- diff(ticks)
-    min_diff <- min(diffs)
-    adj_gap <- min(gap, min_diff)
-  }
-  return(adj_gap)
-}
-
-# Function to adjust ticks to include min and max values
-adjust_ticks <- function(ticks, x_min, x_max,
-                         adj_gap, is_log) {
-
-  if (length(ticks) == 0) {
-    stop("The 'ticks' vector is empty.")
-  }
-
-  if (is_log) {
-    if (x_min <= 0 || x_max <= 0) {
-      stop("Values must be positive for logarithmic scale")
-    }
-  }
-
-  ticks_len <- length(ticks)
-
-  # Adjust maximum tick
-  last_tick <- ticks[ticks_len]
-
-  if (is_log) {
-    log_diff_max <- log10(x_max) - log10(last_tick)
-
-    if (log_diff_max < adj_gap) {
-      ticks[ticks_len] <- x_max
-
-    } else if (log_diff_max >= adj_gap) {
-      ticks <- c(ticks, x_max)
-    }
-  } else {
-    if (x_max - last_tick < adj_gap) {
-      ticks[ticks_len] <- x_max
-
-    } else {
-      ticks <- c(ticks, x_max)
-    }
-  }
-
-  # Adjust minimum tick
-  first_tick <- ticks[1]
-
-  if (is_log) {
-    log_diff_min <- log10(first_tick) - log10(x_min)
-
-    if (log_diff_min < adj_gap) {
-      ticks[1] <- x_min
-
-    } else if (log_diff_min >= adj_gap) {
-      ticks <- c(x_min, ticks)
-    }
-  } else {
-
-    if (first_tick - x_min < adj_gap) {
-      ticks[1] <- x_min
-
-    } else {
-      ticks <- c(x_min, ticks)
-    }
-  }
-
-  return(unique(ticks))
-}
-
-# Main logic for adjusting axis ticks
-adjust_axis_ticks <- function(ticks, x_min, x_max, gap,
-                              is_log,digits = NULL) {
-
-  # Validate inputs
-  if (!is.numeric(ticks) || !is.numeric(x_min) || !is.numeric(x_max) || !is.numeric(gap)) {
-    stop("All numerical inputs must be numeric")
-  }
-
-  if (is_log && (x_min <= 0 || x_max <= 0)) {
-    stop("Values must be positive for logarithmic scale")
-  }
-
-  # Calculate the gap
-  adj_gap <- ticks_gap(ticks, gap, is_log)
-
-  # Adjust ticks to include min and max if needed
-  ticks <- adjust_ticks(ticks, x_min, x_max, adj_gap, is_log)
-
-  if (!is.null(digits)) {
-    ticks <- round(ticks, digits)
-  }
-
-  return(ticks)
-}
-
-
 # Adjust lengths to ensure both axes scale equally on the output device
 shift_scale <- function(value, axis, plot_width, plot_height, is_gap = FALSE) {
   # Adjust shift based on whether it applies to the axis or to a gap
@@ -146,6 +36,11 @@ all_the_same <- function(x, tol = 1e-10){
     return(length(unique(x)) == 1)
   }
 }
+
+#---- --- ---- --- ---- --- ---- --- ---- --- ---- --- ----#
+same_length <- function(x, y) {
+  length(x) == length(y)
+}
 #---- --- ---- --- ---- --- ---- --- ---- --- ---- --- ----#
 are_equal = function(x, y,
                      check.names = TRUE,
@@ -179,6 +74,30 @@ rid_na <- function(x){
 keep_finite <- function(x){
   x <- x[is.finite(x)]
   return(x)
+}
+
+#---- --- ---- --- ---- --- ---- --- ---- --- ---- --- ----#
+all_finite <- function(x) {
+  if (is.data.frame(x) || is.matrix(x)) {
+    # Flatten to check all elements
+    x <- as.vector(x)
+  }
+
+  # Identify non-finite values
+  non_finite_indices <- which(!is.finite(x))
+
+  # Check for finiteness
+  if (length(non_finite_indices) > 0) {
+    non_finite_values <- x[non_finite_indices]
+    stop(paste0(
+      "Input contains non-finite values at indices: ",
+      paste(non_finite_indices, collapse = ", "),
+      ". Non-finite values include: ",
+      paste(unique(non_finite_values), collapse = ", "),
+      ". Please ensure all values are finite (no NA, NaN, or Inf)."
+    ))
+  }
+  return(TRUE)
 }
 #---- --- ---- --- ---- --- ---- --- ---- --- ---- --- ----#
 is_empty_object <- function(x) {
@@ -230,6 +149,62 @@ are_factors <- function(df,
   }
 }
 
+#---- --- ---- --- ---- --- ---- --- ---- --- ---- --- ----#
+# Custom function to check for factors and convert them to numeric
+factors_as_numeric <- function(df, verbose = FALSE) {
+
+  stopifnot(is.data.frame(df))
+
+  # Use are_factors() to check for factors
+  if (are_factors(df, verbose = verbose)) {
+    factor_columns <- names(df)[sapply(df, is.factor)]
+
+    for (col in factor_columns) {
+      # Attempt to convert to numeric
+      original <- df[[col]]
+      df[[col]] <- as.numeric(as.character(df[[col]]))
+
+      # Check for NA coercion
+      if (any(is.na(df[[col]]) & !is.na(original))) {
+        stop(paste0("Conversion of factor column '", col, "' to numeric resulted in NA values. ",
+                    "Please check the column's values for invalid entries."))
+      }
+    }
+  }
+
+  return(df)
+}
+#---- --- ---- --- ---- --- ---- --- ---- --- ---- --- ----#
+# Design to work with character matrices instead of data frames
+chars_as_numeric <- function(df, verbose = FALSE) {
+
+  stopifnot(is.data.frame(df))
+
+  char_columns <- sapply(df, is.character)
+
+  if (any(char_columns)) {
+    if (verbose) {
+      cat("The following columns are characters:\n")
+      print(names(df)[char_columns])
+    }
+
+    for (col in names(df)[char_columns]) {
+      # Attempt to convert to numeric
+      original <- df[[col]]
+      df[[col]] <- as.numeric(df[[col]])
+
+      # Check for NA coercion
+      if (any(is.na(df[[col]]) & !is.na(original))) {
+        stop(paste0("Conversion of character column '", col, "' to numeric resulted in NA values. ",
+                    "Please check the column's values for invalid entries."))
+      }
+    }
+  } else {
+    if (verbose) cat("No columns are characters.\n")
+  }
+
+  return(df)
+}
 #---- --- ---- --- ---- --- ---- --- ---- --- ---- --- ----#
 handle_formula <- function(formula, data) {
   # Check if the input is a formula
@@ -296,4 +271,51 @@ replace_char <- function(.input_string,
        .input_string,
        fixed = !use_regex)
 
+}
+
+#---- --- ---- --- ---- --- ---- --- ---- --- ---- --- ----#
+# Check whether data frame is in long or wide format
+# Since df possess columns of equal length, we only need to check the number of unique IDs and time points
+# If the number of rows equals the product of unique IDs and time points, it's long
+is_long <- function(id, values, df) {
+  stopifnot(is.data.frame(df))
+
+  n_unique1 <- length(unique(df[[id]]))
+  n_unique2 <- length(unique(df[[values]]))
+
+  # Check if columns are numeric
+  is_numeric1 <- is.numeric(df[[id]])
+  is_numeric2 <- is.numeric(df[[values]])
+
+  # Heuristic to determine which is likely the time column:
+  # 1. If one is numeric and other isn't, numeric is likely time
+  # 2. If both/neither numeric, one with fewer unique values is likely time
+  # (time columns typically have fewer unique values than ID columns)
+
+  if (is_numeric1 != is_numeric2) {
+    # If exactly one is numeric, use that as time
+    time_col <- if(is_numeric1) id else values
+    id_col <- if(is_numeric1) values else id
+  } else {
+    # If both or neither are numeric, use number of unique values
+    time_col <- if(n_unique1 < n_unique2) id else values
+    id_col <- if(n_unique1 < n_unique2) values else id
+  }
+
+  # Store the detected column roles
+  attr(df, "detected_time_col") <- time_col
+  attr(df, "detected_id_col") <- id_col
+
+  # Calculate result
+  n_ids <- length(unique(df[[id_col]]))
+  n_time <- length(unique(df[[time_col]]))
+  n_rows <- nrow(df)
+
+  result <- n_ids * n_time == n_rows
+
+  # Add informative message about the detection
+  message(sprintf("Detected '%s' as ID column and '%s' as time column",
+                  id_col, time_col))
+
+  return(result)
 }

@@ -141,12 +141,12 @@ should_be_consecutive <- function(labels,
 #---- --- ---- --- ---- --- ---- --- ---- --- ----#
 # Color by slope function in which the slopes are calculated
 # and colored based on their sign (positive, negative, neutral(0))
-color_by_slope <- function(x, y,
+color_by_slope <- function(x, y = NULL,
                            cols = c("red","gray30","gray70"),
                            ...){
 
   # Calculate the slopes between consecutive points
-  slopes <- diff(y) / diff(x)
+  slopes <- slope(x = x, y = x, ...)
 
   # Initialize a vector to store colors
   colors <- character(length(slopes))
@@ -304,4 +304,69 @@ jitter_labels <- function(values,
   )
 
   return(result)
+}
+
+#---- --- ---- --- ---- --- ---- --- ---- --- ----#
+# Helper function to calculate slopes
+calculate_slope <- function(x, y, na_rm) {
+
+  if (na_rm) {
+    x <- rid_na(x)
+    y <- rid_na(y)
+  }
+
+  if (length(x) < 2 || length(y) < 2) {
+    stop("Not enough valid data points to calculate the slope.")
+  }
+
+  if (length(x) != length(y)) {
+    stop("Input vectors must have the same length.")
+  }
+
+  # Calculate slopes
+  return(diff(y) / diff(x))
+}
+
+slope <- function(x, na_rm = FALSE, ...) UseMethod("slope")
+
+slope.default <- function(x, y = NULL, na_rm = FALSE, ...) {
+
+  if (missing(y)) stop("Missing argument `y`.")
+
+  stopifnot(
+    is.numeric(x),
+    is.numeric(y),
+    is.logical(na_rm),
+    all_finite(x),
+    all_finite(y)
+  )
+
+  calculate_slope(x, y, na_rm)
+}
+
+slope.data.frame <- function(data, na_rm = FALSE, ...) {
+
+  if (!is.data.frame(data)) stop("Input must be a data frame or matrix.")
+  if (!is.logical(na_rm)) stop("`na_rm` must be a logical value.")
+
+  data <- factors_as_numeric(data, verbose = TRUE)
+
+  x <- data[[1]]
+  y <- data[[2]]
+
+  stopifnot(
+    is.numeric(x),
+    is.numeric(y)
+  )
+
+  calculate_slope(x, y, na_rm)
+}
+
+slope.matrix <- function(data, na_rm = FALSE, ...) {
+
+  if (!is.matrix(data)) stop("Input must be a matrix or data frame.")
+  if (!is.logical(na_rm)) stop("`na_rm` must be a logical value.")
+
+  data <- as.data.frame(data)
+  slope.data.frame(data, na_rm, ...)
 }

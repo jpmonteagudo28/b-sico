@@ -47,6 +47,7 @@ This is a basic example which shows you how to solve a common problem:
 
 ```{r example}
  library(basico)
+set_font("Playfair Display")
 box_plot(Diet~weight, .data = ChickWeight,
  horizontal = FALSE, median_symbol = "×",
  add_mean = TRUE, n_ticks = 7,

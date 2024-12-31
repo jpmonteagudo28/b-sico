@@ -22,35 +22,56 @@ x <- gdp$Country
 y <- gdp$Year1970
 z <- gdp$Year1979
 
-par(mar = c(3,7,3,7))
+set_font("WarblerText-Regular", google = FALSE, locally = TRUE)
+
+par(mar = c(3,10,3,10))
 
 plot.new()
 plot.window(c(1970,1979), c(20,60))
 
+# X-axis
 axis(1, at = c(1970,1979),
      labels = c("1970", "1979"),
-     tcl = 0.07, lwd = 0.5,
-     family = "serif")
-axis(2, at = y, labels = round(y,0),line = -3,
-     tcl = -0.05, lwd = 0,
-     family = "serif", las = 2,
-     gap.axis = 1, col.xaxt = "gray50")
-axis(4, at = z, labels = round(z,0),line = -3 ,
-     tcl = -0.05, lwd = 0, las = 2,
-     family = "serif", gap.axis = 1,
-     col.xaxt = "gray50")
+     tcl = 0.0, lwd = 0.5,
+     col.axis = "gray20",
+     cex.axis = 0.75) # Set axis label color
 
-segments(1970, y, 1979, z,
+# Y-axis (left)
+axis(2, at = y,
+     labels = round(y,0),
+     line = -3,
+     tcl = -0.05,
+     lwd = 0,
+     las = 2,
+     gap.axis = 1,
+     col.axis = "gray50",
+     cex.axis = 0.75) # Set axis label color
+
+# Y-axis (right)
+axis(4, at = z, labels = round(z,0), line = -3,
+     tcl = -0.05, lwd = 0,
+     las = 2,
+     gap.axis = 1,
+     col.axis = "gray50",
+     cex.axis = 0.75) # Set axis label color
+
+segments(1970 + .15, y, 1979 - .15, z, # Don't let segments touch axis
          col = "gray70",
          lty = "solid",
          lwd = 0.5)
 
 mtext(x, side = 2, line = 0,
       at = y, las = 2,
-      family = "serif")
+      cex = 0.75)
 mtext(x, side = 4, line = 0,
       at = z, las = 2,
-      family = "serif")
+      cex = 0.75)
+title(main = "Current Receipts of Government as a \nPercentage of Gross Domestic \nProduct, 1970 and 1979",
+      cex.main = .80,
+      font.main = 3,
+      adj = 0.05,
+      line = -5,
+      outer = TRUE)
 
 # Tufte handles overlapping in two ways:
 # 1: Create separate labels for each overlapping point (i.e, Canada & Belgium overlap on the left, but
@@ -58,21 +79,24 @@ mtext(x, side = 4, line = 0,
 #  placed on different points in the scale)
 #  2: Align the labels horizontally on one point
 
-slope <- function(data,...)
-  UseMethod("slope")
+slope_chart <- function(data,...) UseMethod("slope")
 
-slope.default <- function(x = NULL,
+slope_chart.default <- function(x = NULL,
                           y = NULL,
                           na_rm = TRUE,
                           xlim = extendrange(x,f = 0.05),
                           ylim = extendrange(y,f = 0.05),
+                          consecutive_labels = FALSE,
+                          jitter = FALSE,
+                          highlight_slopes = FALSE,
                           main = NULL,
                           main_line = 1, # lines from margin
                           line_type = "solid",
-                          line_color = "gray20",
+                          line_color = "gray70",
                           line_width = 0.5,
                           axes = FALSE,
                           x_axis_labels = NULL,
+                          axis_color = "gray50",
                           right_label_names = NULL,
                           left_label_names = NULL,
                           right_label_size = 1,#cex
@@ -89,7 +113,7 @@ slope.default <- function(x = NULL,
 
 }
 
-slope.data.frame <- function(data,
+slope_chart.data.frame <- function(data,
                              na_rm = TRUE,
                              xlim = extendrange(1:ncol(data),f = 0.05),
                              ylim = extendrange(y,f = 0.05),
@@ -115,7 +139,7 @@ slope.data.frame <- function(data,
 
 }
 
-slope.formula <- function(formula,
+slope_chart.formula <- function(formula,
                           data,
                           na_rm = TRUE,
                           xlim = extendrange(),
