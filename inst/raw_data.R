@@ -2,6 +2,9 @@
 library(dplyr)
 library(rvest)
 library(stringr)
+library(here)
+library(tidyr)
+
 # Cancer Survival rates (2000 - 2020)
 # Set seed for reproducibility
 set.seed(123)
@@ -94,3 +97,30 @@ Year1979 = c(57.4, 55.8, 52.2, 39.0, 43.4, 42.9, 43.2, 35.8, 38.2, 35.7,
 
 # Save the data frame as an RDS file
 saveRDS(gdp, file = "data/gdp_data.rds")
+
+#---- --- ----- --- ---- --- ---- ---- --- ----#
+# Fatal Motor Vehicle Crashes
+# NHTSA Region: 1 = ME, MA, NH, RI, VT
+# Years: 2013-2022
+fatal_crash_path <- here::here("inst/ext_data/cleaned_fatal_crashes.txt")
+nhtsa_fatal_crashes <- read.delim(fatal_crash_path) |>
+  as.data.frame() |>
+  select(-14) |>
+  rename( Year = "X",
+          January = "X.",
+          February = "X..1",
+          March = "X..2",
+          April = "X..3",
+          May = "X..4",
+          June = "X..5",
+          July = "X..6",
+          August = "X..7",
+          September  = "X..8",
+          October = "X..9",
+          November = "X..10",
+          December = "X..11") |>
+  slice(-11) |>
+  mutate(Year = as.numeric(Year))
+
+# Save the data frame as an RDS file
+saveRDS(nhtsa_fatal_crashes, file = "data/fatal_crashes.rds")

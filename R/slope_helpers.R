@@ -146,7 +146,7 @@ color_by_slope <- function(x, y = NULL,
                            ...){
 
   # Calculate the slopes between consecutive points
-  slopes <- slope(x = x, y = x, ...)
+  slopes <- slope(x = x, y = y, ...)
 
   # Initialize a vector to store colors
   colors <- character(length(slopes))
