@@ -17,22 +17,23 @@
 # https://simplexct.com/tufte-in-excel-the-slope-graph
 #
 # Very rough sketch of what I need
-gdp <- readRDS("data/gdp_data.rds")
-x <- gdp$Country
-y <- gdp$Year1970
-z <- gdp$Year1979
-
 set_font("WarblerText-Regular", google = FALSE, locally = TRUE)
 
 par(mar = c(3,10,3,10))
 
 plot.new()
+
+gdp <- readRDS("data/gdp_data.rds")
+x <- gdp$Country
+y <- jitter_labels(gdp$Year1970,x, amount = 1.5,buffer = 0.5, max_iterations = 245)$adjusted_value
+z <- jitter_labels(gdp$Year1979,x, amount = 1.5,buffer = 0.5, max_iterations = 245)$adjusted_value
+
 plot.window(c(1970,1979), c(20,60))
 
 # X-axis
 axis(1, at = c(1970,1979),
      labels = c("1970", "1979"),
-     tcl = 0.0, lwd = 0.5,
+     tcl = 0.0, lwd = 0,
      col.axis = "gray20",
      cex.axis = 0.75) # Set axis label color
 
@@ -59,13 +60,15 @@ segments(1970 + .15, y, 1979 - .15, z, # Don't let segments touch axis
          col = "gray70",
          lty = "solid",
          lwd = 0.5)
-
+# Left labels
 mtext(x, side = 2, line = 0,
       at = y, las = 2,
       cex = 0.75)
+# Right labels
 mtext(x, side = 4, line = 0,
       at = z, las = 2,
       cex = 0.75)
+# Title
 title(main = "Current Receipts of Government as a \nPercentage of Gross Domestic \nProduct, 1970 and 1979",
       cex.main = .80,
       font.main = 3,
@@ -79,10 +82,10 @@ title(main = "Current Receipts of Government as a \nPercentage of Gross Domestic
 #  placed on different points in the scale)
 #  2: Align the labels horizontally on one point
 
-slope_chart <- function(data,...) UseMethod("slope")
+slope_chart <- function(x,...) UseMethod("slope")
 
-slope_chart.default <- function(x = NULL,
-                          y = NULL,
+slope_chart.default <- function(x = NULL,     # Years
+                          y = NULL,           # Values
                           na_rm = TRUE,
                           xlim = extendrange(x,f = 0.05),
                           ylim = extendrange(y,f = 0.05),
@@ -91,36 +94,65 @@ slope_chart.default <- function(x = NULL,
                           jitter = FALSE,
                           amount = NULL,
                           highlight_slopes = FALSE,
-                          main = NULL,
-                          main_line = 1, # lines from margin
                           line_type = "solid",
-                          line_color = "gray70",
+                          slope_color = NULL,
                           line_width = 0.5,
                           axes = FALSE,
                           x_axis_labels = NULL,
                           axis_color = "gray50",
-                          right_label_names = NULL,
-                          left_label_names = NULL,
-                          right_label_size = 1,#cex
-                          left_label_size = 1, #cex
-                          label_gap = 0, #axis-gap
-                          right_label_pos = 2,#las
-                          left_label_pos = 2, #las
-                          margins = NULL, #mar
+                          title = NULL,
+                          title_line = 1,      # lines from margin
+                          label_names = NULL,  # character labels
+                          right_label_size = 1,# cex
+                          left_label_size = 1, # cex
+                          label_gap = 0,       # axis-gap
+                          right_label_pos = 2, # las
+                          left_label_pos = 2,  # las
+                          margins = NULL,      # mar
                           ...
 ){
+  #---- --- ---- --- ---- ---- --- ---- --- ---- ---- ---#
+  # Getting the data organized and transformed
 
+  #---- --- ---- --- ---- ---- --- ---- --- ---- ---- ---#
+  # Getting the data range for plot window
   xlim <- ifelse(is.null(xlim),extendrange(x),xlim)
   ylim <- ifelse(is.null(ylim),extendrange(y),ylim)
 
+  #---- --- ---- --- ---- ---- --- ---- --- ---- ---- ---#
+  # Working the slope and colors
+  if (highlight_slopes) {
+    # Assign default slope colors if none are provided
+    slope_color <- slope_color %||% c("#D41159", "gray30", "gray70")
+
+    # Calculate and assign colors based on slopes
+    colors <- color_by_slope(x = x,
+                             y = y,
+                             cols = slope_color,
+                             na_rm = na_rm)
+  } else {
+    # Assign a default or user-specified single color for non-highlighted slopes
+    slope_color <- slope_color %||% "gray70"
+    colors <- rep(slope_color, length(x) - 1)
+  }
+
+  # Plot the segments with the assigned colors
+  for (i in seq_along(colors)) {
+    segments(x[i], y[i], x[i + 1], y[i + 1],
+             col = colors[i],
+             lty = line_type,
+             lwd = line_width)
+  }
+  #---- --- ---- --- ---- ---- --- ---- --- ---- ---- ---#
+
 }
 
-slope_chart.data.frame <- function(data,
+slope_chart.data.frame <- function(data,       # data frame of x and y values (2 columns)
                              na_rm = TRUE,
-                             xlim = extendrange(1:ncol(data),f = 0.05),
-                             ylim = extendrange(y,f = 0.05),
-                             main = NULL,
-                             main_line = 1,
+                             xlim = NULL, # based on wide data frame input
+                             ylim = NULL,
+                             title = NULL,
+                             title_line = 1,
                              line_type = "solid",
                              line_color = "gray20",
                              line_width = 0.5,
@@ -136,18 +168,21 @@ slope_chart.data.frame <- function(data,
                              margins = NULL,
                              ...){
 
+  stopifnot(is.data.frame(data),
+            )
+
   xlim <- ifelse(is.null(xlim),extendrange(x),xlim)
   ylim <- ifelse(is.null(ylim),extendrange(y),ylim)
 
 }
 
-slope_chart.formula <- function(formula,
+slope_chart.formula <- function(formula,  # formula of x and y values, data frame can have more than two columns
                           data,
                           na_rm = TRUE,
-                          xlim = extendrange(),
-                          ylim = extendrange(),
-                          main = NULL,
-                          main_line = 1,
+                          xlim = NULL,
+                          ylim = NULL,
+                          title = NULL,
+                          title_line = 1,
                           line_type = "solid",
                           line_color = "gray20",
                           line_width = 0.5,

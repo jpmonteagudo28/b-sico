@@ -1,28 +1,6 @@
 # Simple negation function to find excluded elements in a set
 `%!in%` <- Negate(`%in%`)
 
-# Adjust lengths to ensure both axes scale equally on the output device
-shift_scale <- function(value, axis, plot_width, plot_height, is_gap = FALSE) {
-  # Adjust shift based on whether it applies to the axis or to a gap
-  if (axis == "y") {
-    if (is_gap) {
-      # For gaps on the y-axis, use the width
-      value / par("pin")[2] * plot_height
-    } else {
-      # For shifts along the y-axis, use the width
-      value / par("pin")[1] * plot_width
-    }
-  } else {
-    if (is_gap) {
-      # For gaps on the x-axis, use the height
-      value / par("pin")[1] * plot_width
-    } else {
-      # For shifts along the x-axis, use the height
-      value / par("pin")[2] * plot_height
-    }
-  }
-}
-
 #---- --- ---- --- ---- --- ---- --- ---- --- ---- --- ----#
 all_different <- function(x){
   length(unique(x)) == length(x)
@@ -103,31 +81,8 @@ all_finite <- function(x) {
 is_empty_object <- function(x) {
  (length(x) == 0)
 }
-
 #---- --- ---- --- ---- --- ---- --- ---- --- ---- --- ----#
-is.formula <- function(x) inherits(x,"formula")
-
-#---- --- ---- --- ---- --- ---- --- ---- --- ---- --- ----#
-formula_length <- function(x) {
-  if (!is.formula(x)) {
-    stop("Error: Object is not a formula.")
-  }
-
-
-  formula_length <- length(x)
-  formula_parts <- as.list(x)
-
-  # Check for NULL values in formula components based on the length of the formula
-  if (formula_length >= 2 && is.null(formula_parts[[2]])) {
-    stop("Error: Formula contains a NULL value on the left-hand side.")
-  }
-  if (formula_length >= 3 && is.null(formula_parts[[3]])) {
-    stop("Error: Formula contains a NULL value on the right-hand side.")
-  }
-
-  # Return formula length
-  return(formula_length)
-}
+is_date <- function(x) inherits(x,c("Date","POSIXct","POSIXlt","POSIXt"))
 
 #---- --- ---- --- ---- --- ---- --- ---- --- ---- --- ----#
 are_factors <- function(df,
@@ -206,57 +161,6 @@ chars_as_numeric <- function(df, verbose = FALSE) {
   return(df)
 }
 #---- --- ---- --- ---- --- ---- --- ---- --- ---- --- ----#
-handle_formula <- function(formula, data) {
-  # Check if the input is a formula
-  if (!is.formula(formula)) {
-    stop("Error: Provide a valid formula object.")
-  }
-
-  # Validate the formula length
-  n_terms <- formula_length(formula)
-  if (n_terms < 2 || n_terms > 3) {
-    stop("Error: Formula must be of the form '~ x' or 'y ~ x'.")
-  }
-
-  # Extract terms from the formula
-  if (n_terms == 2) {
-    # Handle formula '~ x'
-    x_name <- as.character(formula[[2]]) # Extract variable name
-    x <- data[[x_name]]                 # Retrieve the column from the data
-
-    if (is.null(x)) stop(paste("Error: Variable", x_name, "not found in the dataset."))
-
-    if (!is.numeric(x)) {
-      stop(paste("Error: Variable", x_name, "is not continuous. Please provide a numeric variable."))
-    }
-
-    return(list(x = x, y = NULL))  # Return a list with x only
-  } else {
-    # Handle formula 'y ~ x'
-    y_name <- as.character(formula[[2]]) # Left-hand side
-    x_name <- as.character(formula[[3]]) # Right-hand side
-
-    y <- data[[y_name]]
-    x <- data[[x_name]]
-
-    # Check for missing variables
-    if (is.null(y)) stop(paste("Error: Variable", y_name, "not found in the dataset."))
-    if (is.null(x)) stop(paste("Error: Variable", x_name, "not found in the dataset."))
-
-    # Check data types
-    if (!is.numeric(x)) {
-      warning(paste("Variable", x_name, "is not continuous. Variable will be ignored."))
-    }
-    if (!is.numeric(y)) {
-      warning(paste("Warning: Variable", y_name, "is not continuous and will be ignored."))
-      y <- NULL  # Discard non-continuous 'y'
-    }
-
-    return(list(x = x, y = y))  # Return a list of valid variables
-  }
-}
-
-#---- --- ---- --- ---- --- ---- --- ---- --- ---- --- ----#
 replace_char <- function(.input_string,
                          old_char,
                          new_char,
@@ -278,83 +182,113 @@ replace_char <- function(.input_string,
 # Since df possess columns of equal length, we only need to check the number of unique IDs and time points
 # If the number of rows equals the product of unique IDs and time points, it's long
 is_long <- function(id, values, df) {
-  stopifnot(is.data.frame(df))
+  # Basic input validation
+  stopifnot(
+    is.data.frame(df),
+    !is.null(id),
+    !is.null(values),
+    id %in% names(df),
+    values %in% names(df)
+  )
 
-  n_unique1 <- length(unique(df[[id]]))
-  n_unique2 <- length(unique(df[[values]]))
-
-  # Check if columns are numeric
-  is_numeric1 <- is.numeric(df[[id]])
-  is_numeric2 <- is.numeric(df[[values]])
-
-  # Heuristic to determine which is likely the time column:
-  # 1. If one is numeric and other isn't, numeric is likely time
-  # 2. If both/neither numeric, one with fewer unique values is likely time
-  # (time columns typically have fewer unique values than ID columns)
-
-  if (is_numeric1 != is_numeric2) {
-    # If exactly one is numeric, use that as time
-    time_col <- if(is_numeric1) id else values
-    id_col <- if(is_numeric1) values else id
-  } else {
-    # If both or neither are numeric, use number of unique values
-    time_col <- if(n_unique1 < n_unique2) id else values
-    id_col <- if(n_unique1 < n_unique2) values else id
+  if (nrow(df) == 0) {
+    stop("Empty dataframe")
   }
 
-  # Store the detected column roles
-  attr(df, "detected_time_col") <- time_col
-  attr(df, "detected_id_col") <- id_col
+  # Get column classes and unique counts
+  id_col <- df[[id]]
+  values_col <- df[[values]]
 
-  # Calculate result
-  n_ids <- length(unique(df[[id_col]]))
-  n_time <- length(unique(df[[time_col]]))
+  n_unique_id <- length(unique(id_col))
+  n_unique_values <- length(unique(values_col))
+
+  # Check if columns are various types of time-like data
+  is_time_like <- function(x) {
+    # Use is_date function for time checks
+    is_date(x) || (is.numeric(x) && !any(x %% 1 != 0)) || (is.factor(x) && all(grepl("^\\d+$", levels(x))))
+  }
+
+  is_id_like <- function(x) {
+    is.character(x) || is.factor(x) || (is.numeric(x) && length(unique(x)) == length(x))
+  }
+
+  # Determine roles based on data characteristics
+  id_time_score <- sum(c(
+    is_time_like(id_col) * 2,  # Strong indicator for time
+    is_id_like(values_col) * 1, # Weak indicator for not time
+    (n_unique_id < n_unique_values) * 1  # Weak indicator for time
+  ))
+
+  values_time_score <- sum(c(
+    is_time_like(values_col) * 2,
+    is_id_like(id_col) * 1,
+    (n_unique_values < n_unique_id) * 1
+  ))
+
+  # Determine format
+  if (id_time_score > values_time_score) {
+    time_col <- id
+    id_col_name <- values
+  } else {
+    time_col <- values
+    id_col_name <- id
+  }
+
+  # Calculate expected format characteristics
+  n_ids <- length(unique(df[[id_col_name]]))
+  n_times <- length(unique(df[[time_col]]))
   n_rows <- nrow(df)
 
-  result <- n_ids * n_time == n_rows
+  # Check if data follows long format pattern
+  is_long_format <- n_ids * n_times >= n_rows * 0.9 && # Allow for some missing combinations
+    n_ids * n_times <= n_rows * 1.1
 
-  # Add informative message about the detection
-  message(sprintf("Detected '%s' as ID column and '%s' as time column",
-                  id_col, time_col))
+  # Store detection results as attributes
+  attr(df, "detected_time_col") <- time_col
+  attr(df, "detected_id_col") <- id_col_name
 
-  return(result)
+  # Add informative message
+  message(sprintf(
+    "Detected '%s' as %s column and '%s' as %s column",
+    id_col_name,
+    if(is_long_format) "ID" else "unknown role",
+    time_col,
+    if(is_long_format) "time" else "unknown role"
+  ))
+
+  return(is_long_format)
+}
+#---- --- ---- --- ---- --- ---- --- ---- --- ----#
+# Extend range of character vector if used on any axis
+extend_character_range <- function(x,...){
+
+  if(is.character(x)){
+    len <- length(unique(x))
+    x <- seq(1,len)
+  }
+  extendrange(x,...)
+}
+
+labels <- extendrange(1:ncol(data)) # for wide data frames
+num_range <- extendrange(data[,-labels]) # for wide data frames
+num_range <- extendrange(y,f = 0.05) # for long data frames
+
+#---- --- ---- --- ---- --- ---- --- ---- --- ----#
+# dplyr synonyms using base R
+# taken from https://github.com/coolbutuseless/poorman/blob/master/R/utils.R
+extract <- `[`
+extract2 <- `[[`
+inset <- `[<-`
+set_colnames <- `colnames<-`
+
+deparse_dots <- function(...) {
+  vapply(substitute(...()), deparse, NA_character_)
+}
+
+check_is_dataframe <- function(.data) {
+  parent_fn <- all.names(sys.call(-1L), max.names = 1L)
+  if (!is.data.frame(.data)) stop(parent_fn, " must be given a data.frame")
+  invisible()
 }
 
 #---- --- ---- --- ---- --- ---- --- ---- --- ----#
-# Reorder columns based on position
-reorder_cols <- function(.data,
-                         cols,
-                         new_pos = NULL){
-
-  stopifnot(is.data.frame(.data),
-            is.character(cols),
-            is.numeric(new_pos),
-            length(cols) == length(new_pos)
-  )
-
-  data_names <- names(.data)
-  data_len <- length(data_names)
-  col_pos <- new_pos
-
-  stopifnot(
-    all(cols %in% data_names), # All specified columns must exist
-    all(new_pos > 0),          # Positions must be greater than 0
-    all(new_pos <= data_len),  # Positions must be within bounds
-    !any(duplicated(cols)),    # No duplicate columns
-    !any(duplicated(new_pos))  # No duplicate positions
-  )
-
-  # Initialize the new, ordered df
-  output_df <- character(data_len)
-
-  output_df[col_pos] <- cols
-
-  output_df[-col_pos] <- data_names[!(data_names %in% cols)]
-
-  # Make sure no columns are lost and no new columns are added
-  stopifnot(length(output_df) == data_len)
-
-  .data <- .data[,output_df]
-
-  return(.data)
-}

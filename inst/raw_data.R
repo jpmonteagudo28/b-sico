@@ -75,7 +75,8 @@ colnames(gov_df) <- c(
 # Clean numeric columns (remove parentheses and convert to numeric)
 gov_df <- gov_df %>%
   mutate(across(-Fiscal_Year, ~ as.numeric(str_remove_all(., "[()]")))) |>
-  mutate(Fiscal_Year = c(seq(1947,1976),"TQ",seq(1977,1995)))
+  mutate(Fiscal_Year = c(seq(1947,1976),"TQ",seq(1977,1995))) |>
+  reorder("Total_Government_Expenditures", ncol(gov_df))
 
 saveRDS(gov_df, "data/govt_spending.rds")
 

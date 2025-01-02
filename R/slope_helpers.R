@@ -3,9 +3,16 @@
 # Can take units(user", "inches", "figure"),font(1,2,3,4), and `cex` arguments
 # `units` argument set to "user" by default, however if `plot.new()` hasn't been called
 # the function will return an error. To avoid this, set `units` to "inches" or "figure".
-char_pixels <- function(.x, cex = 1, units = "user", ...) {
-  # Calculate the width of a character string based on graphical parameters
+
+char_pixels <- function(.x,
+                        cex = 1,
+                        units = "user",
+                        ...) {
+
+  # Calculate the width of a character
+  # string based on graphical parameters
   width <- strwidth(.x, cex = cex, units = units, ...)
+
   if (units == "user" && !par("plt")[1] > 0.09) {
     stop("`units` set to 'user', but no active plotting device found. Call `plot.new()` or use other units.")
   }
@@ -308,7 +315,7 @@ jitter_labels <- function(values,
 
 #---- --- ---- --- ---- --- ---- --- ---- --- ----#
 # Helper function to calculate slopes
-calculate_slope <- function(x, y, na_rm) {
+calculate_slope <- function(x, y, na_rm = FALSE) {
 
   if (na_rm) {
     x <- rid_na(x)
@@ -371,3 +378,4 @@ slope.matrix <- function(data, na_rm = FALSE, ...) {
   slope.data.frame(data, na_rm, ...)
 }
 
+#---- --- ---- --- ---- --- ---- --- ---- --- ----#

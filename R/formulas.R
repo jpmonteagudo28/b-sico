@@ -1,88 +1,74 @@
-# Set up basic formulas to pass as plot arguments in base plots
-# Based on grantmcdermott tinyplot package
-# https://github.com/grantmcdermott/tinyplot/blob/main/R/tinyformula.R
+# Check if the input is a formula
+is.formula <- function(x) inherits(x,"formula")
 
-basic_formula <- function(formula,facet = NULL){
-  # input y ~ x or y~ x| z
-  # facet: ~a or ~ a + b
-  #
-  # output:
-  # x: ~x
-  # y: ~y or NULL
-  # by: NULL, or ~z or ~ z1 + z2...zn
-  # xfacet: NULL or ~a or ~ a+ b
-  # yfacet: NULL or ~b
-
-  if(!inherits(formula, "formula")){
-    formula = stats::as.formula(formula)
-  }
-  nf = length(formula)
-
-  x = ~ x
-  y = if (nf ==2L) NULL else ~ y
-  by = if(!inherits(formula[[nf]],"call")|| formula[[nf]][[1L]] != as.name("|")) NULL else ~ z
-
-  if (is.null(facet) || !inherits(facet, "formula")) {
-
-    xfacet = NULL
-    yfacet = NULL
-
-  } else {
-
-    xfacet = ~ a
-    yfacet = if (length(facet) == 2L) NULL else ~ b
-  }
-  environment(x) = environment(formula)
-  if (!is.null(y)) {
-
-    environment(y) = environment(formula)
-    y[[2L]] = formula[[2L]]
-  }
-  if (is.null(by)) {
-
-    x[[2L]] = formula[[nf]]
-  } else {
-
-    environment(by) = environment(formula)
-    by[[2L]] = formula[[nf]][[3L]]
-    x[[2L]] = formula[[nf]][[2L]]
-  }
-  if (!is.null(xfacet)) {
-
-    environment(xfacet) = environment(formula)
-    xfacet[[2L]] = facet[[length(facet)]]
-  }
-  if (!is.null(yfacet)) {
-
-    environment(yfacet) = environment(formula)
-    yfacet[[2L]] = facet[[2L]]
+#---- --- ---- --- ---- --- ---- --- ---- --- ---- --- ----#
+formula_length <- function(x) {
+  if (!is.formula(x)) {
+    stop("Error: Object is not a formula.")
   }
 
-  ## combine everything
-  full = x
-  if (!is.null(y))      full[[2L]] = call("+", full[[2L]], y[[2L]])
-  if (!is.null(by))     full[[2L]] = call("+", full[[2L]], by[[2L]])
-  if (!is.null(xfacet)) full[[2L]] = call("+", full[[2L]], xfacet[[2L]])
-  if (!is.null(yfacet)) full[[2L]] = call("+", full[[2L]], yfacet[[2L]])
 
-  ## return list of all formulas
-  return(list(
-    x = x,
-    y = y,
-    by = by,
-    xfacet = xfacet,
-    yfacet = yfacet,
-    full = full
-  ))
+  formula_length <- length(x)
+  formula_parts <- as.list(x)
+
+  # Check for NULL values in formula components based on the length of the formula
+  if (formula_length >= 2 && is.null(formula_parts[[2]])) {
+    stop("Error: Formula contains a NULL value on the left-hand side.")
+  }
+  if (formula_length >= 3 && is.null(formula_parts[[3]])) {
+    stop("Error: Formula contains a NULL value on the right-hand side.")
+  }
+
+  # Return formula length
+  return(formula_length)
 }
+#---- --- ---- --- ---- --- ---- --- ---- --- ---- --- ----#
+handle_formula <- function(formula, data) {
+  # Check if the input is a formula
+  if (!is.formula(formula)) {
+    stop("Error: Provide a valid formula object.")
+  }
 
-basic_frame = function(formula, data, drop = FALSE) {
-  ## input
-  ## - formula: (sub-)formula
-  ## - data: model.frame from full formula
-  if (is.null(formula)) return(NULL)
-  names = sapply(attr(terms(formula), "variables")[-1L], deparse, width.cutoff = 500L)
-  data[, names, drop = drop]
+  # Validate the formula length
+  n_terms <- formula_length(formula)
+  if (n_terms < 2 || n_terms > 3) {
+    stop("Error: Formula must be of the form '~ x' or 'y ~ x'.")
+  }
+
+  # Extract terms from the formula
+  if (n_terms == 2) {
+    # Handle formula '~ x'
+    x_name <- as.character(formula[[2]]) # Extract variable name
+    x <- data[[x_name]]                 # Retrieve the column from the data
+
+    if (is.null(x)) stop(paste("Error: Variable", x_name, "not found in the dataset."))
+
+    if (!is.numeric(x)) {
+      stop(paste("Error: Variable", x_name, "is not continuous. Please provide a numeric variable."))
+    }
+
+    return(list(x = x, y = NULL))  # Return a list with x only
+  } else {
+    # Handle formula 'y ~ x'
+    y_name <- as.character(formula[[2]]) # Left-hand side
+    x_name <- as.character(formula[[3]]) # Right-hand side
+
+    y <- data[[y_name]]
+    x <- data[[x_name]]
+
+    # Check for missing variables
+    if (is.null(y)) stop(paste("Error: Variable", y_name, "not found in the dataset."))
+    if (is.null(x)) stop(paste("Error: Variable", x_name, "not found in the dataset."))
+
+    # Check data types
+    if (!is.numeric(x)) {
+      warning(paste("Variable", x_name, "is not continuous. Variable will be ignored."))
+    }
+    if (!is.numeric(y)) {
+      warning(paste("Warning: Variable", y_name, "is not continuous and will be ignored."))
+      y <- NULL  # Discard non-continuous 'y'
+    }
+
+    return(list(x = x, y = y))  # Return a list of valid variables
+  }
 }
-
-
