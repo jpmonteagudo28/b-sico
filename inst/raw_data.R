@@ -120,7 +120,11 @@ nhtsa_fatal_crashes <- read.delim(fatal_crash_path) |>
           November = "X..10",
           December = "X..11") |>
   slice(-11) |>
-  mutate(Year = as.numeric(Year))
+  mutate(Year = as.numeric(Year)) |>
+  pivot_longer(cols = January:December,
+               names_to = "Month",
+               values_to = "Fatalities") |>
+  pivot_wider(names_from = Year, values_from = Fatalities)
 
 # Save the data frame as an RDS file
 saveRDS(nhtsa_fatal_crashes, file = "data/fatal_crashes.rds")

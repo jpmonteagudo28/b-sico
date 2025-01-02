@@ -63,7 +63,7 @@ box_plot <- function(formula,
                      median_color = "black",
                      add_mean = TRUE,
                      mean_symbol = 1,
-                     mean_color = "red",
+                     mean_color = "#D41159",
                      outlier_symbol = 1,
                      outlier_size = 0.5,
                      ...

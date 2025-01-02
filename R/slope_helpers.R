@@ -142,7 +142,7 @@ should_be_consecutive <- function(labels,
 # Color by slope function in which the slopes are calculated
 # and colored based on their sign (positive, negative, neutral(0))
 color_by_slope <- function(x, y = NULL,
-                           cols = c("red","gray30","gray70"),
+                           cols = c("#D41159","gray30","gray70"),
                            ...){
 
   # Calculate the slopes between consecutive points
@@ -370,3 +370,4 @@ slope.matrix <- function(data, na_rm = FALSE, ...) {
   data <- as.data.frame(data)
   slope.data.frame(data, na_rm, ...)
 }
+
