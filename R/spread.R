@@ -16,8 +16,9 @@
 #' @examples
 #' # Simple example
 #' df <- data.frame(id = 1:3, key = c("a","b","a"), value = 1:3)
-#' spread_wide(id_cols = "id", names_from = "key", values_from = "value", data = df)
-spread_wide <- function(id_cols,
+#' spread(id_cols = "id", names_from = "key", values_from = "value", data = df)
+#' @export
+spread <- function(id_cols,
                         names_from,
                         values_from,
                         data,

@@ -1,6 +1,21 @@
 # Simple negation function to find excluded elements in a set
 `%!in%` <- Negate(`%in%`)
 
+# The function adds or subtracts a random value (either positive or negative)
+# from x using y as the magnitude.
+# A random choice is made for each operation: either +y or -y is applied to x.
+`%+-%` <- function(x, y) {
+  if (!is.numeric(x) || !is.numeric(y)) {
+    stop("Both operands must be numeric.")
+  }
+  # Randomly pick a value from the range 0 to y, then either add or subtract
+  change <- as.integer(runif(1, min = 0, max = y))
+  sign_change <- sample(c(-1, 1), size = 1)  # Randomly decide whether to add or subtract
+
+  x + sign_change * change  # Apply the random change to x
+}
+
+
 #---- --- ---- --- ---- --- ---- --- ---- --- ---- --- ----#
 all_different <- function(x){
   length(unique(x)) == length(x)
@@ -177,87 +192,6 @@ replace_char <- function(.input_string,
 
 }
 
-#---- --- ---- --- ---- --- ---- --- ---- --- ---- --- ----#
-# Check whether data frame is in long or wide format
-# Since df possess columns of equal length, we only need to check the number of unique IDs and time points
-# If the number of rows equals the product of unique IDs and time points, it's long
-is_long <- function(id, values, df) {
-  # Basic input validation
-  stopifnot(
-    is.data.frame(df),
-    !is.null(id),
-    !is.null(values),
-    id %in% names(df),
-    values %in% names(df)
-  )
-
-  if (nrow(df) == 0) {
-    stop("Empty dataframe")
-  }
-
-  # Get column classes and unique counts
-  id_col <- df[[id]]
-  values_col <- df[[values]]
-
-  n_unique_id <- length(unique(id_col))
-  n_unique_values <- length(unique(values_col))
-
-  # Check if columns are various types of time-like data
-  is_time_like <- function(x) {
-    # Use is_date function for time checks
-    is_date(x) || (is.numeric(x) && !any(x %% 1 != 0)) || (is.factor(x) && all(grepl("^\\d+$", levels(x))))
-  }
-
-  is_id_like <- function(x) {
-    is.character(x) || is.factor(x) || (is.numeric(x) && length(unique(x)) == length(x))
-  }
-
-  # Determine roles based on data characteristics
-  id_time_score <- sum(c(
-    is_time_like(id_col) * 2,  # Strong indicator for time
-    is_id_like(values_col) * 1, # Weak indicator for not time
-    (n_unique_id < n_unique_values) * 1  # Weak indicator for time
-  ))
-
-  values_time_score <- sum(c(
-    is_time_like(values_col) * 2,
-    is_id_like(id_col) * 1,
-    (n_unique_values < n_unique_id) * 1
-  ))
-
-  # Determine format
-  if (id_time_score > values_time_score) {
-    time_col <- id
-    id_col_name <- values
-  } else {
-    time_col <- values
-    id_col_name <- id
-  }
-
-  # Calculate expected format characteristics
-  n_ids <- length(unique(df[[id_col_name]]))
-  n_times <- length(unique(df[[time_col]]))
-  n_rows <- nrow(df)
-
-  # Check if data follows long format pattern
-  is_long_format <- n_ids * n_times >= n_rows * 0.9 && # Allow for some missing combinations
-    n_ids * n_times <= n_rows * 1.1
-
-  # Store detection results as attributes
-  attr(df, "detected_time_col") <- time_col
-  attr(df, "detected_id_col") <- id_col_name
-
-  # Add informative message
-  message(sprintf(
-    "Detected '%s' as %s column and '%s' as %s column",
-    id_col_name,
-    if(is_long_format) "ID" else "unknown role",
-    time_col,
-    if(is_long_format) "time" else "unknown role"
-  ))
-
-  return(is_long_format)
-}
 #---- --- ---- --- ---- --- ---- --- ---- --- ----#
 # Extend range of character vector if used on any axis
 extend_character_range <- function(x,...){
@@ -285,7 +219,7 @@ deparse_dots <- function(...) {
   vapply(substitute(...()), deparse, NA_character_)
 }
 
-check_is_dataframe <- function(.data) {
+is_dataframe <- function(.data) {
   parent_fn <- all.names(sys.call(-1L), max.names = 1L)
   if (!is.data.frame(.data)) stop(parent_fn, " must be given a data.frame")
   invisible()

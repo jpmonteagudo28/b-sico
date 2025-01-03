@@ -11,8 +11,8 @@
 #' @examples
 #' # Simple example
 #' df <- data.frame(id = 1:3, a = 1:3, b = 4:6)
-#' gather_long(data = df, id_cols = "id", names_to = "key", values_to = "value")
-gather_long <- function(data,
+#' gather(data = df, id_cols = "id", names_to = "key", values_to = "value")
+gather <- function(data,
                         id_cols,
                         names_to = "variable",
                         values_to = "value",
@@ -57,7 +57,7 @@ gather_long <- function(data,
   name_mapping <- setNames(original_names, seq_along(original_names))
 
   # Reshape to long format
-  result <- reshape(data,
+  result <- stats::reshape(data,
                     direction = "long",
                     varying = cols_to_gather,
                     idvar = id_cols,

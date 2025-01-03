@@ -18,21 +18,46 @@ cancer_types <- c(
 )
 years <- seq(2000, 2020, by = 5)  # 20-year period in 5-year intervals
 
+# Cancer parameters: initial rates and random yearly change factor
 cancer_parameters <- data.frame(
   Cancer = cancer_types,
-  InitialSurvivalRate = round(runif(length(cancer_types), min = 70, max = 95), 1),
-  DecayFactor = round(runif(length(cancer_types), min = 0.01, max = 0.05), 3)
+  InitialSurvivalRate = round(runif(length(cancer_types), min = 53, max = 95), 1),
+  Trend = sample(c("Increase", "Decrease"), length(cancer_types), replace = TRUE)
 )
 
-# Generate survival data with distinct trajectories
+# Generate survival data with random yearly changes
 cancer_survival <- expand.grid(Cancer = cancer_types, Year = years) |>
   left_join(cancer_parameters, by = "Cancer") |>
+  group_by(Cancer) |>
+  arrange(Year) |>
   mutate(
-    TimeElapsed = Year - min(years),
-    SurvivalRate = round(InitialSurvivalRate * exp(-DecayFactor * TimeElapsed), 1),
-    Cancer = as.factor(Cancer)
+    SurvivalRate = {
+      rates <- numeric(length(years))  # Initialize a numeric vector
+      rates[1] <- InitialSurvivalRate[1]  # Start with the initial survival rate
+
+      for (i in 2:length(years)) {
+        change <- runif(1, min = -15, max = 7)  # Random yearly change (-15% to 7%)
+
+        # Calculate new rate based on trend
+        if (Trend[1] == "Increase") {
+          rates[i] <- rates[i - 1] + change
+        } else {
+          rates[i] <- rates[i - 1] - change
+        }
+
+        # Enforce strict caps
+        rates[i] <- pmin(pmax(rates[i], 0), (87 %+-% 8))  # Ensure rate is within [0, 99]
+      }
+
+      signif(rates,3)  # Round to one decimal place
+    },
+    Trend = Trend[1]
   ) |>
-  select(Cancer, Year, SurvivalRate)
+  ungroup() |>
+  select(Cancer, Year, SurvivalRate) |>
+  tidyr::pivot_wider(names_from = Year, values_from = SurvivalRate)
+
+
 
 # Save the data frame as an .rds file
 saveRDS(cancer_survival, "data/cancer_survival.rds")

@@ -3,7 +3,7 @@
 #' @param .data A `data.frame`.
 #' @param ... Expressions used to filter the data by.
 filter <- function(.data, ...) {
-  check_is_dataframe(.data)
+  is_dataframe(.data)
   UseMethod("filter")
 }
 

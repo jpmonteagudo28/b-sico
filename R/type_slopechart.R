@@ -84,11 +84,11 @@ title(main = "Current Receipts of Government as a \nPercentage of Gross Domestic
 
 slope_chart <- function(x,...) UseMethod("slope")
 
-slope_chart.default <- function(x = NULL,     # Years
+slope_chart.default <- function(x = NULL,     # Years/time
                           y = NULL,           # Values
                           na_rm = TRUE,
-                          xlim = extendrange(x,f = 0.05),
-                          ylim = extendrange(y,f = 0.05),
+                          xlim = NULL,
+                          ylim = NULL,
                           consecutive_labels = FALSE,
                           within_labels_gap = NULL,
                           jitter = FALSE,
@@ -102,15 +102,22 @@ slope_chart.default <- function(x = NULL,     # Years
                           axis_color = "gray50",
                           title = NULL,
                           title_line = 1,      # lines from margin
-                          label_names = NULL,  # character labels
-                          right_label_size = 1,# cex
-                          left_label_size = 1, # cex
+                          label_names = NULL,  # character labels on y-axis
+                          label_size = 1,      # cex
                           label_gap = 0,       # axis-gap
-                          right_label_pos = 2, # las
-                          left_label_pos = 2,  # las
+                          label_pos = 2,       # las
                           margins = NULL,      # mar
                           ...
 ){
+  # Sanity checks
+  stopifnot(is.numeric(x) ||is.character(x) || is.factor(x),
+            is.numeric(y),
+            length(x) == length(y),
+            length(x) >= 2,
+            length(y) >= 2,
+            !is.null(x),
+            !is.null(y))
+
   #---- --- ---- --- ---- ---- --- ---- --- ---- ---- ---#
   # Getting the data organized and transformed
 
